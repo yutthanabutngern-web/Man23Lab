@@ -28,6 +28,7 @@
   --c-cash: #7B8794;
   --c-gold: #BC8F25;
   --c-btc: #D06A32;
+  --proj: #B35C0A;
   --f-display: "Bai Jamjuree", "IBM Plex Sans Thai", system-ui, sans-serif;
   --f-body: "IBM Plex Sans Thai", system-ui, sans-serif;
   --f-num: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
@@ -38,7 +39,7 @@
     --ink: #E6ECF2; --ink-2: #A6B3C0; --ink-3: #8794A2;
     --accent: #6AA6E8; --accent-soft: #1B2C42;
     --up: #3CC693; --up-soft: #12302A; --dn: #FF7A6E; --dn-soft: #3A1E1D;
-    --c-th: #5C9BE0; --c-us: #A28BE0; --c-fund: #45C0CF; --c-cash: #94A0AD; --c-gold: #E0B54D; --c-btc: #F08C55;
+    --c-th: #5C9BE0; --c-us: #A28BE0; --c-fund: #45C0CF; --c-cash: #94A0AD; --c-gold: #E0B54D; --c-btc: #F08C55; --proj: #F2A24D;
     color-scheme: dark;
   }
 }
@@ -47,7 +48,7 @@
   --ink: #E6ECF2; --ink-2: #A6B3C0; --ink-3: #8794A2;
   --accent: #6AA6E8; --accent-soft: #1B2C42;
   --up: #3CC693; --up-soft: #12302A; --dn: #FF7A6E; --dn-soft: #3A1E1D;
-  --c-th: #5C9BE0; --c-us: #A28BE0; --c-fund: #45C0CF; --c-cash: #94A0AD; --c-gold: #E0B54D; --c-btc: #F08C55;
+  --c-th: #5C9BE0; --c-us: #A28BE0; --c-fund: #45C0CF; --c-cash: #94A0AD; --c-gold: #E0B54D; --c-btc: #F08C55; --proj: #F2A24D;
   color-scheme: dark;
 }
 
@@ -112,6 +113,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; color: var(--ink-2); margin-bottom: 8px; }
 .legend i { display: inline-block; width: 18px; height: 0; border-top: 2.5px solid var(--accent); vertical-align: middle; margin-right: 6px; }
 .legend i.dash { border-top: 2px dashed var(--ink-3); }
+.legend i.dot { border-top: 3px dotted var(--proj); }
 .tip { position: absolute; top: 8px; pointer-events: none; background: var(--surface); border: 1px solid var(--line); box-shadow: 0 4px 16px rgba(0,0,0,.12); border-radius: 8px; padding: 8px 10px; font-size: 13px; min-width: 160px; z-index: 2; }
 .tip .d { color: var(--ink-2); margin-bottom: 4px; }
 .tip .r { display: flex; justify-content: space-between; gap: 12px; }
@@ -133,7 +135,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .chips button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--surface); font-weight: 500; }
 
 .tbl-scroll { overflow-x: auto; margin-inline: -4px; padding-inline: 4px; }
-table { width: 100%; border-collapse: collapse; min-width: 700px; font-size: 14px; }
+table { width: 100%; border-collapse: collapse; min-width: 800px; font-size: 14px; }
 th { text-align: right; font-weight: 500; font-size: 12px; color: var(--ink-2); letter-spacing: 0.02em; padding: 0 10px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
 th:first-child, td:first-child { text-align: left; padding-left: 0; }
 th button { font-size: 12px; color: var(--ink-2); display: inline-flex; gap: 4px; align-items: center; padding: 2px 0; }
@@ -174,7 +176,9 @@ input[aria-invalid="true"] { border-color: var(--dn); background: var(--dn-soft)
 .erow .calc { text-align: right; font-size: 14px; }
 .cl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .blank-note { min-height: 22px; font-size: 13px; color: var(--ink-2); margin: 10px 0 0; }
-.mng { display: grid; grid-template-columns: minmax(90px, .6fr) minmax(0, 2fr) minmax(130px, .9fr) auto; gap: 8px 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.mng { display: grid; grid-template-columns: minmax(90px, .6fr) minmax(0, 2fr) minmax(130px, .9fr) minmax(110px, .6fr) auto; gap: 8px 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.mng.mh { font-size: 12px; color: var(--ink-2); padding: 0 0 8px; }
+.mng .f { min-width: 0; }
 .mng.add { border-bottom: 0; padding-top: 14px; }
 .sec-title { font-family: var(--f-display); font-weight: 600; font-size: 15px; margin: 18px 0 6px; }
 details.how { margin: 0 0 14px; font-size: 14px; color: var(--ink-2); max-width: 70ch; }
@@ -189,6 +193,7 @@ details.how p { margin: 8px 0 0; }
   .erow .calc { text-align: left; }
   .erow .calc .num { font-size: 15px; }
   .mng { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
+  .mng.mh { display: none; }
   .mng .nm { grid-column: 1 / -1; }
   .mng .btn { justify-self: start; }
 }
@@ -267,10 +272,11 @@ details.how p { margin: 8px 0 0; }
       { n: 'ทองคำแท่ง 96.5%',           t: 'GOLD',   c: 'gold', lump: 100000, dca: 5000, mu: 1.6,  sd: 4.5 },
       { n: 'Bitcoin',                   t: 'BTC',    c: 'btc',  lump: 150000, dca: 5000, mu: 2.4,  sd: 13 }
     ];
+    var GROW = { ADVANC: 8, AOT: 6, KBANK: 7, CPALL: 5, PTT: 4, VOO: 10, NVDA: 18, 'SET50-F': 7, 'MM-F': 1.5, GOLD: 6, BTC: 20 };
     var assets = [], months = {}, endI = kIdx('2026-11'), startI = endI - 23;
     defs.forEach(function (d, ai) {
       var id = 's' + ai;
-      assets.push({ id: id, name: d.n, ticker: d.t, cls: d.c });
+      assets.push({ id: id, name: d.n, ticker: d.t, cls: d.c, g: GROW[d.t] });
       var run = 0;
       for (var i = startI; i <= endI; i++) {
         var k = idxKey(i), c = (i === startI ? d.lump : 0) + d.dca;
@@ -305,7 +311,7 @@ details.how p { margin: 8px 0 0; }
   var loaded = false, canWrite = true, mode = 'pending'; // pending | db | local | memory
   var dbDoc = null;
   var page = 'overview', sub = 'month', selMonth = null, selAsset = null, backExtra = 0;
-  var rangeN = 12, filter = 'all', sort = { k: 'V', dir: -1 };
+  var rangeN = 12, projH = 12, projC = true, filter = 'all', sort = { k: 'V', dir: -1 };
   var armed = null, armTimer = null;
   var ov = null, geo = null;
   var view = $('view');
@@ -453,6 +459,32 @@ details.how p { margin: 8px 0 0; }
     } else b.innerHTML = '';
   }
 
+  /* ---------- คาดการณ์ ---------- */
+  var HLBL = { 12: '1 ปี', 24: '2 ปี', 60: '5 ปี' };
+  // คาดการณ์จากมูลค่าปัจจุบันของแต่ละสินทรัพย์ ด้วย % เติบโตต่อปีที่กรอกไว้ (เว้นว่าง = 0%)
+  // เงินที่ใส่เพิ่มในอนาคต = ค่าเฉลี่ย 6 เดือนล่าสุดของสินทรัพย์นั้น (ถ้าเปิดใช้)
+  function project(C, H, withC) {
+    var out = { pts: [], final: {}, totalP: 0, avgTot: 0 };
+    if (!C.lastDataKey) return out;
+    var lastI = kIdx(C.lastDataKey), ti = C.tl.indexOf(C.lastDataKey), st = {}, cost = 0, avgTot = 0;
+    S.assets.forEach(function (a) {
+      var x = cellOf(C, a.id, C.lastDataKey), sum = 0, n = 0, j;
+      for (j = Math.max(0, ti - 5); j <= ti; j++) { sum += cellOf(C, a.id, C.tl[j]).c; n++; }
+      var avg = withC && n ? sum / n : 0, g = typeof a.g === 'number' ? a.g : 0;
+      st[a.id] = { P: x.V, avg: avg, gm: Math.pow(1 + g / 100, 1 / 12) - 1 };
+      cost += x.C; avgTot += avg;
+    });
+    for (var h = 1; h <= H; h++) {
+      var P = 0;
+      S.assets.forEach(function (a) { var q = st[a.id]; q.P = Math.max(0, (q.P + q.avg) * (1 + q.gm)); P += q.P; });
+      cost += avgTot;
+      out.pts.push({ k: idxKey(lastI + h), p: P, c: cost });
+    }
+    S.assets.forEach(function (a) { out.final[a.id] = st[a.id].P; out.totalP += st[a.id].P; });
+    out.avgTot = avgTot;
+    return out;
+  }
+
   /* ---------- ภาพรวม ---------- */
   function kpi(lab, val, meta, vc) {
     return '<div class="panel kpi"><span class="lab">' + lab + '</span><span class="val ' + (vc || '') + '">' + val + '</span><span class="meta">' + meta + '</span></div>';
@@ -474,10 +506,13 @@ details.how p { margin: 8px 0 0; }
       var x = cellOf(C, a.id, lastKey);
       if (x.V === 0 && x.C === 0) return;
       var lr = x.base > 0 ? (x.pl / x.base) * 100 : null;
-      rows.push({ id: a.id, t: a.ticker || a.name, n: a.name, cls: a.cls, C: x.C, V: x.V, pl: x.V - x.C, plp: x.C > 0 ? ((x.V - x.C) / x.C) * 100 : 0, lr: lr, w: val > 0 ? (x.V / val) * 100 : 0 });
+      rows.push({ id: a.id, t: a.ticker || a.name, n: a.name, cls: a.cls, C: x.C, V: x.V, pl: x.V - x.C, plp: x.C > 0 ? ((x.V - x.C) / x.C) * 100 : 0, lr: lr, w: val > 0 ? (x.V / val) * 100 : 0, g: a.g, P: 0 });
       byClass[a.cls] = (byClass[a.cls] || 0) + x.V;
     });
-    ov = { C: C, pts: pts, lastKey: lastKey, rows: rows, byClass: byClass, total: val };
+    var pr = project(C, projH || 12, projC);
+    rows.forEach(function (r) { r.P = pr.final[r.id] || 0; });
+    var hLbl = HLBL[projH || 12];
+    ov = { C: C, pts: pts, lastKey: lastKey, rows: rows, byClass: byClass, total: val, pr: pr, hLbl: hLbl };
     var order = Object.keys(byClass).filter(function (k) { return byClass[k] > 0; }).sort(function (a, b) { return byClass[b] - byClass[a]; });
     ov.order = order;
     if (filter !== 'all' && order.indexOf(filter) < 0) filter = 'all';
@@ -487,12 +522,20 @@ details.how p { margin: 8px 0 0; }
       kpi('กำไร/ขาดทุนสะสม', sbaht(pl), pill(plp), cls(pl)) +
       kpi('ผลตอบแทนเดือน' + mOnly(lastKey), last.ret === null ? '–' : spct(last.ret), sbaht(last.pl) + ' ไม่รวมเงินที่ใส่เพิ่ม', last.ret === null ? '' : cls(last.ret)) +
       kpi('เงินที่ใส่เพิ่ม 12 เดือนล่าสุด', bahtS(c12), 'เฉลี่ย ' + bahtS(c12 / Math.min(12, ci + 1)) + ' ต่อเดือน') +
+      kpi('มูลค่าคาดการณ์ใน ' + hLbl, bahtS(pr.totalP), pill(val > 0 ? ((pr.totalP - val) / val) * 100 : 0) + ' เทียบกับตอนนี้') +
       '</section>';
 
-    h += '<div class="row"><section class="panel"><div class="panel-head"><h2>มูลค่าพอร์ตเทียบกับเงินลงทุน</h2><div class="tabs" role="group" aria-label="ช่วงเวลา">' +
+    var anyG = S.assets.some(function (a) { return typeof a.g === 'number'; });
+    var projNote = projH ? '<p class="blank-note">' + (anyG
+      ? 'คาดการณ์จากมูลค่าปัจจุบัน ใช้ % เติบโตต่อปีที่กรอกไว้ของแต่ละสินทรัพย์ (เว้นว่าง = 0%) ' + (projC ? 'และสมมติใส่เพิ่มเดือนละ ' + bahtS(pr.avgTot) + ' (เฉลี่ย 6 เดือนล่าสุด)' : 'โดยไม่ใส่เงินเพิ่ม')
+      : 'ยังไม่ได้กรอก % เติบโตของสินทรัพย์ เส้นคาดการณ์จึงเท่ากับไม่มีการเติบโต <a href="#entry" data-act="goManage">ไปกรอกที่จัดการสินทรัพย์</a>') + '</p>' : '';
+    h += '<div class="row"><section class="panel"><div class="panel-head"><h2>มูลค่าพอร์ต เงินลงทุน และมูลค่าคาดการณ์</h2><div class="tabs" role="group" aria-label="ช่วงเวลาย้อนหลัง">' +
       [[6, '6 เดือน'], [12, '12 เดือน'], [0, 'ทั้งหมด']].map(function (r) { return '<button data-act="range" data-v="' + r[0] + '" aria-pressed="' + (rangeN === r[0]) + '">' + r[1] + '</button>'; }).join('') +
-      '</div></div><div class="legend"><span><i></i>มูลค่าตลาด</span><span><i class="dash"></i>เงินลงทุนสะสม</span></div>' +
-      '<div class="chart-wrap" id="chartWrap"><div class="tip" id="tip" hidden></div></div></section>';
+      '</div></div><div class="ctrl"><span class="note">คาดการณ์ล่วงหน้า</span><div class="tabs" role="group" aria-label="คาดการณ์ล่วงหน้า">' +
+      [[0, 'ไม่แสดง'], [12, '1 ปี'], [24, '2 ปี'], [60, '5 ปี']].map(function (r) { return '<button data-act="proj" data-v="' + r[0] + '" aria-pressed="' + (projH === r[0]) + '">' + r[1] + '</button>'; }).join('') + '</div>' +
+      (projH ? '<div class="tabs" role="group" aria-label="เงินที่ใส่เพิ่มในอนาคต"><button data-act="projc" data-v="1" aria-pressed="' + projC + '">ใส่เพิ่มต่อ</button><button data-act="projc" data-v="0" aria-pressed="' + (!projC) + '">หยุดใส่เพิ่ม</button></div>' : '') + '</div>' +
+      '<div class="legend"><span><i></i>มูลค่าตลาด</span><span><i class="dash"></i>เงินลงทุนสะสม</span>' + (projH ? '<span><i class="dot"></i>มูลค่าคาดการณ์</span>' : '') + '</div>' +
+      '<div class="chart-wrap" id="chartWrap"><div class="tip" id="tip" hidden></div></div>' + projNote + '</section>';
 
     var C0 = 2 * Math.PI * 76, acc = 0;
     var ds = '<circle cx="100" cy="100" r="76" fill="none" stroke="var(--surface-2)" stroke-width="26"/>';
@@ -506,7 +549,7 @@ details.how p { margin: 8px 0 0; }
       order.map(function (k) { return '<li><span class="dot" style="background:' + CLASSES[k].color + '"></span><span>' + CLASSES[k].name + '</span><span class="pct">' + nf2.format((byClass[k] / val) * 100) + '%</span><span class="amt">' + bahtS(byClass[k]) + '</span></li>'; }).join('') +
       '</ul></section></div>';
 
-    var COLS = [['t', 'สินทรัพย์'], ['C', 'เงินลงทุนสะสม'], ['V', 'มูลค่า'], ['plp', 'กำไร/ขาดทุน'], ['lr', 'เดือน' + mOnly(lastKey)], ['w', 'สัดส่วน']];
+    var COLS = [['t', 'สินทรัพย์'], ['C', 'เงินลงทุนสะสม'], ['V', 'มูลค่า'], ['plp', 'กำไร/ขาดทุน'], ['lr', 'เดือน' + mOnly(lastKey)], ['P', 'คาดการณ์ ' + hLbl], ['w', 'สัดส่วน']];
     var shown = rows.filter(function (r) { return filter === 'all' || r.cls === filter; });
     shown.sort(function (a, b) {
       var x = a[sort.k], y = b[sort.k];
@@ -525,6 +568,7 @@ details.how p { margin: 8px 0 0; }
           '<td class="num">' + bahtS(r.C) + '</td><td class="num">' + bahtS(r.V) + '</td>' +
           '<td class="num ' + cls(r.pl) + '">' + sbaht(r.pl) + '<span class="pl-sub">' + arrow(r.plp) + ' ' + spct(r.plp) + '</span></td>' +
           '<td class="num ' + (r.lr === null ? 'flat' : cls(r.lr)) + '">' + (r.lr === null ? '–' : arrow(r.lr) + ' ' + spct(r.lr)) + '</td>' +
+          '<td class="num">' + bahtS(r.P) + '<span class="pl-sub flat">' + (typeof r.g === 'number' ? spct(r.g) + '/ปี' : 'ยังไม่กรอก %') + '</span></td>' +
           '<td><div class="w"><span class="num">' + nf2.format(r.w) + '%</span><span class="bar"><b style="width:' + Math.min(100, r.w * 3).toFixed(1) + '%"></b></span></div></td></tr>';
       }).join('') + '</tbody></table></div></section>';
 
@@ -543,36 +587,53 @@ details.how p { margin: 8px 0 0; }
     var tip = $('tip');
     var old = wrap.querySelector('svg'); if (old) old.remove();
     var oldMsg = wrap.querySelector('.empty-chart'); if (oldMsg) oldMsg.remove();
-    var data = rangeN ? ov.pts.slice(-rangeN) : ov.pts;
+    var hist = rangeN ? ov.pts.slice(-rangeN) : ov.pts;
+    var fut = projH ? ov.pr.pts : [];
+    var hl = hist.length;
+    var data = hist.map(function (p, i) { return { k: p.k, v: p.v, c: p.c, p: (i === hl - 1 && fut.length) ? p.v : null, ret: p.ret, fut: false }; })
+      .concat(fut.map(function (p) { return { k: p.k, v: null, c: p.c, p: p.p, ret: null, fut: true }; }));
     if (data.length < 2) { tip.hidden = true; wrap.insertAdjacentHTML('afterbegin', '<div class="empty-chart">ต้องมีข้อมูลอย่างน้อย 2 เดือนจึงจะแสดงกราฟ</div>'); return; }
-    var W = Math.max(280, wrap.clientWidth), H = W < 520 ? 230 : 300;
-    var m = { l: 62, r: 12, t: 10, b: 26 };
+    var n = data.length;
+    var W = Math.max(280, wrap.clientWidth), H = W < 520 ? 240 : 310;
+    var m = { l: 62, r: 12, t: 16, b: 26 };
     var iw = W - m.l - m.r, ih = H - m.t - m.b;
     var lo = Infinity, hi = -Infinity;
-    data.forEach(function (p) { lo = Math.min(lo, p.v, p.c); hi = Math.max(hi, p.v, p.c); });
+    data.forEach(function (p) { ['v', 'c', 'p'].forEach(function (q) { if (p[q] !== null) { lo = Math.min(lo, p[q]); hi = Math.max(hi, p[q]); } }); });
     var step = niceStep(Math.max(hi - lo, 1), 4);
     var y0 = Math.floor(lo / step) * step, y1 = Math.ceil(hi / step) * step;
     if (y1 === y0) y1 = y0 + step;
-    function X(i) { return m.l + (i / (data.length - 1)) * iw; }
+    function X(i) { return m.l + (i / (n - 1)) * iw; }
     function Y(v) { return m.t + ih - ((v - y0) / (y1 - y0)) * ih; }
-    var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="กราฟมูลค่าพอร์ตและเงินลงทุนสะสมรายเดือน">';
+    function path(key) {
+      var d = '', started = false;
+      data.forEach(function (p, i) { if (p[key] === null) return; d += (started ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(p[key]).toFixed(1); started = true; });
+      return d;
+    }
+    var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="กราฟมูลค่าพอร์ต เงินลงทุนสะสม และมูลค่าคาดการณ์">';
     s += '<defs><linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity=".22"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>';
     for (var v = y0; v <= y1 + step * 0.01; v += step) {
       var yy = Y(v).toFixed(1);
       s += '<line x1="' + m.l + '" x2="' + (W - m.r) + '" y1="' + yy + '" y2="' + yy + '" stroke="var(--line)" stroke-width="1"/><text class="ax" x="' + (m.l - 8) + '" y="' + (+yy + 4) + '" text-anchor="end">' + axisLab(v) + '</text>';
     }
-    var ticks = Math.min(data.length, W < 520 ? 4 : 6);
+    var ticks = Math.min(n, W < 520 ? 4 : 6);
     for (var k = 0; k < ticks; k++) {
-      var idx = ticks === 1 ? 0 : Math.round((k / (ticks - 1)) * (data.length - 1));
+      var idx = ticks === 1 ? 0 : Math.round((k / (ticks - 1)) * (n - 1));
       var anchor = k === 0 ? 'start' : k === ticks - 1 ? 'end' : 'middle';
       s += '<text class="ax" x="' + X(idx).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="' + anchor + '">' + mShort(data[idx].k) + '</text>';
     }
-    var lineV = data.map(function (p, i) { return (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(p.v).toFixed(1); }).join('');
-    var lineC = data.map(function (p, i) { return (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(p.c).toFixed(1); }).join('');
-    s += '<path d="' + lineV + 'L' + X(data.length - 1).toFixed(1) + ' ' + (m.t + ih) + 'L' + m.l + ' ' + (m.t + ih) + 'Z" fill="url(#ga)"/>';
-    s += '<path d="' + lineC + '" fill="none" stroke="var(--ink-3)" stroke-width="1.6" stroke-dasharray="5 4"/>';
+    if (fut.length) {
+      var fx = X(hl - 1);
+      s += '<rect x="' + fx.toFixed(1) + '" y="' + m.t + '" width="' + (X(n - 1) - fx).toFixed(1) + '" height="' + ih + '" fill="var(--surface-2)" opacity=".75"/>';
+      s += '<line x1="' + fx.toFixed(1) + '" x2="' + fx.toFixed(1) + '" y1="' + m.t + '" y2="' + (m.t + ih) + '" stroke="var(--ink-3)" stroke-width="1" stroke-dasharray="2 3"/>';
+      s += '<text class="ax" x="' + (fx - 5).toFixed(1) + '" y="' + (m.t + 10) + '" text-anchor="end">ปัจจุบัน</text>';
+    }
+    var lineV = path('v');
+    s += '<path d="' + lineV + 'L' + X(hl - 1).toFixed(1) + ' ' + (m.t + ih) + 'L' + m.l + ' ' + (m.t + ih) + 'Z" fill="url(#ga)"/>';
+    s += '<path d="' + path('c') + '" fill="none" stroke="var(--ink-3)" stroke-width="1.6" stroke-dasharray="5 4"/>';
+    if (fut.length) s += '<path d="' + path('p') + '" fill="none" stroke="var(--proj)" stroke-width="3" stroke-linecap="round" stroke-dasharray="0.1 6"/>';
     s += '<path d="' + lineV + '" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linejoin="round"/>';
-    s += '<circle cx="' + X(data.length - 1).toFixed(1) + '" cy="' + Y(data[data.length - 1].v).toFixed(1) + '" r="4.5" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/>';
+    s += '<circle cx="' + X(hl - 1).toFixed(1) + '" cy="' + Y(data[hl - 1].v).toFixed(1) + '" r="4.5" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/>';
+    if (fut.length) s += '<circle cx="' + X(n - 1).toFixed(1) + '" cy="' + Y(data[n - 1].p).toFixed(1) + '" r="4.5" fill="var(--proj)" stroke="var(--surface)" stroke-width="2"/>';
     s += '<g id="cross" hidden><line id="cl" y1="' + m.t + '" y2="' + (m.t + ih) + '" stroke="var(--ink-3)" stroke-width="1"/><circle id="cd" r="4.5" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/></g>';
     s += '<rect id="hit" x="' + m.l + '" y="' + m.t + '" width="' + iw + '" height="' + ih + '" fill="transparent"/></svg>';
     wrap.insertAdjacentHTML('afterbegin', s);
@@ -585,16 +646,25 @@ details.how p { margin: 8px 0 0; }
     var px = (e.clientX - rect.left) * (geo.W / rect.width);
     var i = Math.round(((px - geo.m.l) / geo.iw) * (geo.data.length - 1));
     i = Math.max(0, Math.min(geo.data.length - 1, i));
-    var p = geo.data[i], x = geo.X(i), y = geo.Y(p.v);
+    var p = geo.data[i], x = geo.X(i), y = geo.Y(p.v !== null ? p.v : p.p);
     $('cross').removeAttribute('hidden');
     $('cl').setAttribute('x1', x); $('cl').setAttribute('x2', x);
     $('cd').setAttribute('cx', x); $('cd').setAttribute('cy', y);
-    var pl = p.v - p.c, plp = p.c > 0 ? (pl / p.c) * 100 : 0;
-    tip.innerHTML = '<div class="d">' + mLong(p.k) + '</div>' +
-      '<div class="r"><span>มูลค่า</span><b class="num">' + bahtS(p.v) + '</b></div>' +
-      '<div class="r"><span>เงินลงทุน</span><span class="num">' + bahtS(p.c) + '</span></div>' +
-      '<div class="r"><span>กำไรสะสม</span><span class="num ' + cls(pl) + '">' + spct(plp) + '</span></div>' +
-      '<div class="r"><span>ผลตอบแทนเดือนนี้</span><span class="num ' + (p.ret === null ? 'flat' : cls(p.ret)) + '">' + (p.ret === null ? '–' : spct(p.ret)) + '</span></div>';
+    $('cd').setAttribute('fill', p.fut ? 'var(--proj)' : 'var(--accent)');
+    if (p.fut) {
+      var fpl = p.p - p.c, fpp = p.c > 0 ? (fpl / p.c) * 100 : 0;
+      tip.innerHTML = '<div class="d">คาดการณ์ · ' + mLong(p.k) + '</div>' +
+        '<div class="r"><span>มูลค่าคาดการณ์</span><b class="num">' + bahtS(p.p) + '</b></div>' +
+        '<div class="r"><span>เงินลงทุน (สมมติ)</span><span class="num">' + bahtS(p.c) + '</span></div>' +
+        '<div class="r"><span>กำไรที่คาด</span><span class="num ' + cls(fpl) + '">' + spct(fpp) + '</span></div>';
+    } else {
+      var pl = p.v - p.c, plp = p.c > 0 ? (pl / p.c) * 100 : 0;
+      tip.innerHTML = '<div class="d">' + mLong(p.k) + '</div>' +
+        '<div class="r"><span>มูลค่า</span><b class="num">' + bahtS(p.v) + '</b></div>' +
+        '<div class="r"><span>เงินลงทุน</span><span class="num">' + bahtS(p.c) + '</span></div>' +
+        '<div class="r"><span>กำไรสะสม</span><span class="num ' + cls(pl) + '">' + spct(plp) + '</span></div>' +
+        '<div class="r"><span>ผลตอบแทนเดือนนี้</span><span class="num ' + (p.ret === null ? 'flat' : cls(p.ret)) + '">' + (p.ret === null ? '–' : spct(p.ret)) + '</span></div>';
+    }
     tip.hidden = false;
     var tw = tip.offsetWidth, left = (x / geo.W) * rect.width + 12;
     if (left + tw > rect.width) left = (x / geo.W) * rect.width - tw - 12;
@@ -682,7 +752,7 @@ details.how p { margin: 8px 0 0; }
     var months = displayMonths(C).slice().reverse();
     var h = HOW + '<div class="ctrl"><select class="field" id="aSel" aria-label="เลือกสินทรัพย์">' +
       S.assets.map(function (x) { return '<option value="' + esc(x.id) + '"' + (x.id === selAsset ? ' selected' : '') + '>' + esc((x.ticker ? x.ticker + ' · ' : '') + x.name) + '</option>'; }).join('') +
-      '</select><span class="note">เรียงจากเดือนล่าสุดลงไป</span></div><div class="erows">' + HEAD.replace('@@FIRST@@', 'เดือน');
+      '</select><label class="note" for="gIn">คาดการณ์เติบโต (%/ปี)</label><input class="field mi in" id="gIn" style="width:110px" inputmode="decimal" autocomplete="off" data-a="' + esc(a.id) + '" data-f="g" value="' + (typeof a.g === 'number' ? a.g : '') + '" placeholder="0" aria-label="คาดการณ์เติบโตต่อปี (%) ของ ' + esc(a.ticker || a.name) + '"' + (ro() ? ' disabled' : '') + '><span class="note">เรียงจากเดือนล่าสุดลงไป</span></div><div class="erows">' + HEAD.replace('@@FIRST@@', 'เดือน');
     months.forEach(function (k) {
       var e = (S.months[k] || {})[a.id] || {};
       h += '<div class="erow"><div class="name"><div class="t" style="font-weight:500">' + mLong(k) + '</div></div>' +
@@ -696,17 +766,20 @@ details.how p { margin: 8px 0 0; }
   function manageBody() {
     var clsOpts = function (sel) { return Object.keys(CLASSES).map(function (k) { return '<option value="' + k + '"' + (k === sel ? ' selected' : '') + '>' + CLASSES[k].name + '</option>'; }).join(''); };
     var dis = ro() ? ' disabled' : '';
-    var h = '<p class="intro">เพิ่ม แก้ไข หรือลบสินทรัพย์ที่คุณถือ การลบสินทรัพย์จะลบข้อมูลรายเดือนของสินทรัพย์นั้นไปด้วย</p>';
+    var h = '<p class="intro">เพิ่ม แก้ไข หรือลบสินทรัพย์ที่คุณถือ และกรอก % เติบโตต่อปีที่คาดไว้ของแต่ละสินทรัพย์ เพื่อใช้คำนวณมูลค่าคาดการณ์ในหน้าภาพรวม (เว้นว่าง = 0%) การลบสินทรัพย์จะลบข้อมูลรายเดือนของสินทรัพย์นั้นไปด้วย</p>';
+    if (S.assets.length) h += '<div class="mng mh"><span>ชื่อย่อ</span><span>ชื่อสินทรัพย์</span><span>ประเภท</span><span>คาดการณ์เติบโต (%/ปี)</span><span></span></div>';
     S.assets.forEach(function (a) {
       var key = 'del:' + a.id;
-      h += '<div class="mng"><input class="field mi" data-a="' + esc(a.id) + '" data-f="ticker" value="' + esc(a.ticker || '') + '" placeholder="ชื่อย่อ" aria-label="ชื่อย่อ"' + dis + '>' +
-        '<input class="field mi nm" data-a="' + esc(a.id) + '" data-f="name" value="' + esc(a.name) + '" placeholder="ชื่อสินทรัพย์" aria-label="ชื่อสินทรัพย์"' + dis + '>' +
-        '<select class="field mc" data-a="' + esc(a.id) + '" aria-label="ประเภท"' + dis + '>' + clsOpts(a.cls) + '</select>' +
+      h += '<div class="mng"><div class="f"><label class="cl" for="t_' + esc(a.id) + '">ชื่อย่อ</label><input class="field mi" id="t_' + esc(a.id) + '" data-a="' + esc(a.id) + '" data-f="ticker" value="' + esc(a.ticker || '') + '" placeholder="ชื่อย่อ" aria-label="ชื่อย่อ"' + dis + '></div>' +
+        '<div class="f nm"><label class="cl" for="n_' + esc(a.id) + '">ชื่อสินทรัพย์</label><input class="field mi" id="n_' + esc(a.id) + '" data-a="' + esc(a.id) + '" data-f="name" value="' + esc(a.name) + '" placeholder="ชื่อสินทรัพย์" aria-label="ชื่อสินทรัพย์"' + dis + '></div>' +
+        '<div class="f"><label class="cl" for="k_' + esc(a.id) + '">ประเภท</label><select class="field mc" id="k_' + esc(a.id) + '" data-a="' + esc(a.id) + '" aria-label="ประเภท"' + dis + '>' + clsOpts(a.cls) + '</select></div>' +
+        '<div class="f"><label class="cl" for="g_' + esc(a.id) + '">คาดการณ์เติบโต (%/ปี)</label><input class="field mi in" id="g_' + esc(a.id) + '" inputmode="decimal" autocomplete="off" data-a="' + esc(a.id) + '" data-f="g" value="' + (typeof a.g === 'number' ? a.g : '') + '" placeholder="0" aria-label="คาดการณ์เติบโตต่อปี (%) ของ ' + esc(a.ticker || a.name) + '"' + dis + '></div>' +
         '<button class="btn danger sm' + (armed === key ? ' armed' : '') + '" data-act="delAsset" data-a="' + esc(a.id) + '"' + dis + '>' + (armed === key ? 'ยืนยันลบ' : 'ลบ') + '</button></div>';
     });
-    h += '<div class="sec-title">เพิ่มสินทรัพย์ใหม่</div><div class="mng add"><input class="field" id="nTick" placeholder="ชื่อย่อ เช่น PTT" aria-label="ชื่อย่อสินทรัพย์ใหม่"' + dis + '>' +
-      '<input class="field nm" id="nName" placeholder="ชื่อสินทรัพย์" aria-label="ชื่อสินทรัพย์ใหม่"' + dis + '>' +
-      '<select class="field" id="nCls" aria-label="ประเภทสินทรัพย์ใหม่"' + dis + '>' + clsOpts('th') + '</select>' +
+    h += '<div class="sec-title">เพิ่มสินทรัพย์ใหม่</div><div class="mng add"><div class="f"><label class="cl" for="nTick">ชื่อย่อ</label><input class="field" id="nTick" placeholder="ชื่อย่อ เช่น PTT" aria-label="ชื่อย่อสินทรัพย์ใหม่"' + dis + '></div>' +
+      '<div class="f nm"><label class="cl" for="nName">ชื่อสินทรัพย์</label><input class="field" id="nName" placeholder="ชื่อสินทรัพย์" aria-label="ชื่อสินทรัพย์ใหม่"' + dis + '></div>' +
+      '<div class="f"><label class="cl" for="nCls">ประเภท</label><select class="field" id="nCls" aria-label="ประเภทสินทรัพย์ใหม่"' + dis + '>' + clsOpts('th') + '</select></div>' +
+      '<div class="f"><label class="cl" for="nG">คาดการณ์เติบโต (%/ปี)</label><input class="field in" id="nG" inputmode="decimal" autocomplete="off" placeholder="เช่น 8" aria-label="คาดการณ์เติบโตต่อปี (%) ของสินทรัพย์ใหม่"' + dis + '></div>' +
       '<button class="btn primary" data-act="addAsset"' + dis + '>เพิ่ม</button></div><p class="blank-note" id="addNote"></p>';
     var k2 = 'clearAll';
     h += '<div class="sec-title">ล้างข้อมูล</div><p class="intro">ลบสินทรัพย์และข้อมูลรายเดือนทั้งหมดเพื่อเริ่มใหม่ ย้อนกลับไม่ได้</p>' +
@@ -774,7 +847,15 @@ details.how p { margin: 8px 0 0; }
 
   view.addEventListener('input', function (e) {
     var el = e.target;
-    if (el.classList.contains('in')) {
+    if (el.classList.contains('mi') && el.dataset.f === 'g') {
+      var ga = S.assets.filter(function (x) { return x.id === el.dataset.a; })[0];
+      var gv = parseNum(el.value);
+      if (gv === 'pending') { el.removeAttribute('aria-invalid'); return; }
+      if (!ga || gv === undefined || (gv !== null && gv <= -100)) { el.setAttribute('aria-invalid', 'true'); return; }
+      el.removeAttribute('aria-invalid');
+      if (gv === null) delete ga.g; else ga.g = gv;
+      persist();
+    } else if (el.classList.contains('in')) {
       var raw = el.value, v = parseNum(raw), f = el.dataset.f;
       if (v === 'pending') { el.removeAttribute('aria-invalid'); return; }
       if (v === undefined || (f === 'v' && v !== null && v < 0)) { el.setAttribute('aria-invalid', 'true'); return; }
@@ -803,6 +884,9 @@ details.how p { margin: 8px 0 0; }
     if (act === 'disarm') { disarm(); render(); return; }
     if (act === 'range') { rangeN = +b.dataset.v; render(); }
     else if (act === 'filter') { filter = b.dataset.v; render(); }
+    else if (act === 'proj') { projH = +b.dataset.v; render(); }
+    else if (act === 'projc') { projC = b.dataset.v === '1'; render(); }
+    else if (act === 'goManage') { sub = 'manage'; }
     else if (act === 'sort') { var k = b.dataset.k; if (sort.k === k) sort.dir = -sort.dir; else { sort.k = k; sort.dir = k === 't' ? 1 : -1; } render(); }
     else if (act === 'sub') { sub = b.dataset.v; if (page !== 'entry') { location.hash = '#entry'; } else render(); }
     else if (act === 'backMore') { backExtra += 12; renderEntryBody(); }
@@ -824,7 +908,11 @@ details.how p { margin: 8px 0 0; }
       var name = $('nName').value.trim(), tick = $('nTick').value.trim();
       if (!name && !tick) { $('addNote').textContent = 'ใส่ชื่อหรือชื่อย่อของสินทรัพย์ก่อน'; return; }
       var id = 'a' + Date.now().toString(36) + Math.floor(Math.random() * 1296).toString(36);
-      S.assets.push({ id: id, name: name || tick, ticker: tick, cls: $('nCls').value });
+      var gv = parseNum($('nG').value);
+      if (gv === undefined || gv === 'pending' || (gv !== null && gv <= -100)) { $('addNote').textContent = 'ใส่ % เติบโตเป็นตัวเลข เช่น 8 หรือ -2'; return; }
+      var na = { id: id, name: name || tick, ticker: tick, cls: $('nCls').value };
+      if (gv !== null) na.g = gv;
+      S.assets.push(na);
       selAsset = selAsset || id;
       persist(); renderEntryBody();
     }
