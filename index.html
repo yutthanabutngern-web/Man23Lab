@@ -230,7 +230,7 @@ details.how p { margin: 8px 0 0; }
 <div class="wrap">
   <header class="top">
     <div>
-      <h1>พอร์ตลงทุนของ Man23_Lab</h1>
+      <h1>พอร์ตลงทุนของครอบครัว</h1>
       <div class="sub" id="sub"></div>
     </div>
     <div class="hright">
@@ -358,7 +358,7 @@ try {
   var S = makeSample();
   var loaded = false, canWrite = true, mode = 'firebase';
   var page = 'overview', sub = 'month', selMonth = null, selAsset = null, backExtra = 0;
-  var rangeN = 12, projH = 12, projC = true, filter = 'all', sort = { k: 'V', dir: -1 };
+  var retAsset = 'all', retN = 12, rangeN = 12, projH = 12, projC = true, filter = 'all', sort = { k: 'V', dir: -1 };
   var armed = null, armTimer = null;
   var ov = null, geo = null;
   var view = $('view');
@@ -692,7 +692,29 @@ try {
           '<td><div class="w"><span class="num">' + nf2.format(r.w) + '%</span><span class="bar"><b style="width:' + Math.min(100, r.w * 3).toFixed(1) + '%"></b></span></div></td></tr>';
       }).join('') + '</tbody></table></div></section>';
 
-    h += '<section class="panel"><div class="panel-head"><h2>ผลตอบแทนรายเดือนของพอร์ต</h2><span class="note">12 เดือนล่าสุด ไม่รวมเงินที่ใส่เพิ่ม</span></div><div class="chart-wrap" id="barsWrap"></div></section>';
+    // กราฟ % กำไร/ขาดทุนแต่ละเดือน (เลือกทั้งพอร์ตหรือรายสินทรัพย์)
+    if (retAsset !== 'all' && !S.assets.some(function (a) { return a.id === retAsset; })) retAsset = 'all';
+    var rs = [], ci2 = C.tl.indexOf(lastKey), q;
+    for (q = 0; q <= ci2; q++) {
+      var kk = C.tl[q], rv = null;
+      if (retAsset === 'all') rv = C.T[kk].ret;
+      else { var cc = cellOf(C, retAsset, kk); rv = cc.base > 0 ? (cc.pl / cc.base) * 100 : null; }
+      if (rv !== null) rs.push({ k: kk, ret: rv });
+    }
+    if (retN) rs = rs.slice(-retN);
+    ov.ret = rs;
+    var rsum = '';
+    if (rs.length) {
+      var best = rs[0], worst = rs[0], tot = 0, pos = 0;
+      rs.forEach(function (r) { if (r.ret > best.ret) best = r; if (r.ret < worst.ret) worst = r; tot += r.ret; if (r.ret > 0) pos++; });
+      var stat = function (l, v, c, sub) { return '<div class="rstat"><span class="note">' + l + '</span><span class="num ' + c + '">' + v + '</span><span class="note">' + sub + '</span></div>'; };
+      rsum = '<div class="rsum">' + stat('เดือนที่ดีที่สุด', spct(best.ret), cls(best.ret), mLong(best.k)) + stat('เดือนที่แย่ที่สุด', spct(worst.ret), cls(worst.ret), mLong(worst.k)) +
+        stat('เฉลี่ยต่อเดือน', spct(tot / rs.length), cls(tot / rs.length), 'จาก ' + rs.length + ' เดือน') + stat('เดือนที่ได้กำไร', pos + ' จาก ' + rs.length, '', nf2.format((pos / rs.length) * 100) + '% ของเดือนทั้งหมด') + '</div>';
+    }
+    h += '<section class="panel"><div class="panel-head"><h2>กราฟ % กำไร/ขาดทุนแต่ละเดือน</h2><div class="ctrl" style="margin:0"><label class="cl" for="retAsset">เลือกสินทรัพย์</label><select class="field" id="retAsset" aria-label="เลือกสินทรัพย์ที่จะดูกราฟ"><option value="all"' + (retAsset === 'all' ? ' selected' : '') + '>ทั้งพอร์ต</option>' +
+      S.assets.map(function (a) { return '<option value="' + esc(a.id) + '"' + (a.id === retAsset ? ' selected' : '') + '>' + esc((a.ticker ? a.ticker + ' · ' : '') + a.name) + '</option>'; }).join('') + '</select>' +
+      '<div class="tabs" role="group" aria-label="ช่วงเวลา">' + [[6, '6 เดือน'], [12, '12 เดือน'], [24, '24 เดือน'], [0, 'ทั้งหมด']].map(function (r) { return '<button data-act="retrange" data-v="' + r[0] + '" aria-pressed="' + (retN === r[0]) + '">' + r[1] + '</button>'; }).join('') + '</div></div></div>' +
+      '<p class="note" style="margin:0 0 10px">คิดจากกำไร/ขาดทุนของเดือนนั้น เทียบกับมูลค่าต้นเดือนรวมเงินที่ใส่เพิ่ม (ไม่รวมเงินที่ใส่เพิ่มเป็นกำไร)</p>' + rsum + '<div class="chart-wrap" id="barsWrap"></div></section>';
     return h;
   }
 
@@ -798,23 +820,30 @@ try {
   function drawBars() {
     var el = $('barsWrap'); if (!el || !ov) return;
     el.innerHTML = '';
-    var data = ov.pts.slice(-12).filter(function (p) { return p.ret !== null; });
-    if (!data.length) { el.innerHTML = '<div class="empty-chart">ยังไม่มีข้อมูลผลตอบแทน</div>'; return; }
-    var W = Math.max(280, el.clientWidth), H = 210;
-    var m = { l: 8, r: 8, t: 22, b: 26 };
+    var data = ov.ret || [];
+    if (!data.length) { el.innerHTML = '<div class="empty-chart">ยังไม่มีข้อมูลผลตอบแทนของสินทรัพย์นี้ กรอกมูลค่าปัจจุบันในหน้ากรอกข้อมูล</div>'; return; }
+    var W = Math.max(280, el.clientWidth), H = 240;
+    var m = { l: 46, r: 8, t: 22, b: 28 };
     var iw = W - m.l - m.r, ih = H - m.t - m.b;
     var lo = Math.min(0, Math.min.apply(null, data.map(function (p) { return p.ret; })));
     var hi = Math.max(0, Math.max.apply(null, data.map(function (p) { return p.ret; })));
     if (hi === lo) hi = 1;
+    var step = niceStep(hi - lo, 4);
+    lo = Math.floor(lo / step) * step; hi = Math.ceil(hi / step) * step;
     function Y(v) { return m.t + ih - ((v - lo) / (hi - lo)) * ih; }
-    var bw = iw / data.length, barw = Math.min(40, bw * 0.62), zy = Y(0);
-    var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="ผลตอบแทนรายเดือนของพอร์ต">';
+    var bw = iw / data.length, barw = Math.max(3, Math.min(40, bw * 0.66)), zy = Y(0);
+    var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="กราฟ % กำไรขาดทุนแต่ละเดือน">';
+    for (var v = lo; v <= hi + step * 0.01; v += step) {
+      var yy = Y(v).toFixed(1);
+      s += '<line x1="' + m.l + '" x2="' + (W - m.r) + '" y1="' + yy + '" y2="' + yy + '" stroke="var(--line)" stroke-width="1"/><text class="ax" x="' + (m.l - 6) + '" y="' + (+yy + 4) + '" text-anchor="end">' + (Math.abs(v) < 1e-9 ? '0' : (v > 0 ? '+' : '−') + nf2.format(Math.abs(v)).replace(/\.00$/, '')) + '%</text>';
+    }
     s += '<line x1="' + m.l + '" x2="' + (W - m.r) + '" y1="' + zy.toFixed(1) + '" y2="' + zy.toFixed(1) + '" stroke="var(--ink-3)" stroke-width="1"/>';
+    var showVal = W >= 520 && data.length <= 14, every = Math.max(1, Math.ceil(data.length / Math.max(1, Math.floor(iw / (data.length > 12 ? 60 : 30)))));
     data.forEach(function (p, i) {
       var cx = m.l + (i + 0.5) * bw, y = Y(p.ret), top = Math.min(y, zy), hh = Math.max(2, Math.abs(y - zy));
-      s += '<rect x="' + (cx - barw / 2).toFixed(1) + '" y="' + top.toFixed(1) + '" width="' + barw.toFixed(1) + '" height="' + hh.toFixed(1) + '" rx="3" fill="' + (p.ret >= 0 ? 'var(--up)' : 'var(--dn)') + '"><title>' + mLong(p.k) + ' ' + spct(p.ret) + '</title></rect>';
-      if (W >= 520) s += '<text class="axl" x="' + cx.toFixed(1) + '" y="' + (p.ret >= 0 ? top - 5 : top + hh + 12).toFixed(1) + '" text-anchor="middle">' + nf2.format(p.ret) + '</text>';
-      s += '<text class="ax" x="' + cx.toFixed(1) + '" y="' + (H - 7) + '" text-anchor="middle">' + mOnly(p.k) + '</text>';
+      s += '<rect x="' + (cx - barw / 2).toFixed(1) + '" y="' + top.toFixed(1) + '" width="' + barw.toFixed(1) + '" height="' + hh.toFixed(1) + '" rx="2" fill="' + (p.ret >= 0 ? 'var(--up)' : 'var(--dn)') + '"><title>' + mLong(p.k) + ' ' + spct(p.ret) + '</title></rect>';
+      if (showVal) s += '<text class="axl" x="' + cx.toFixed(1) + '" y="' + (p.ret >= 0 ? top - 5 : top + hh + 12).toFixed(1) + '" text-anchor="middle">' + nf2.format(p.ret) + '</text>';
+      if (i % every === 0) s += '<text class="ax" x="' + cx.toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle">' + (data.length > 12 ? mShort(p.k) : mOnly(p.k)) + '</text>';
     });
     el.innerHTML = s + '</svg>';
   }
@@ -997,6 +1026,7 @@ try {
     if (ov && y > 0) { projH = y * 12; ov.pr = project(ov.C, projH, projC); drawLine(); }
   });
   view.addEventListener('change', function (e) {
+    if (e.target.id === 'retAsset') { retAsset = e.target.value; render(); var rf = $('retAsset'); if (rf && rf.focus) rf.focus(); return; }
     if (e.target.id === 'projYears' || e.target.id === 'projNum') {
       var id = e.target.id;
       projH = clampYears(e.target.value) * 12;
@@ -1022,6 +1052,7 @@ try {
     if (act === 'range') { rangeN = +b.dataset.v; render(); }
     else if (act === 'filter') { filter = b.dataset.v; render(); }
     else if (act === 'proj') { projH = +b.dataset.v; render(); }
+    else if (act === 'retrange') { retN = +b.dataset.v; render(); }
     else if (act === 'projc') { projC = b.dataset.v === '1'; render(); }
     else if (act === 'goManage') { sub = 'manage'; }
     else if (act === 'sort') { var k = b.dataset.k; if (sort.k === k) sort.dir = -sort.dir; else { sort.k = k; sort.dir = k === 't' ? 1 : -1; } render(); }
@@ -1088,6 +1119,9 @@ try {
 
 <style>
 /* ---------- พื้นหลังรูปครอบครัว ---------- */
+.rsum { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px 16px; margin: 0 0 12px; }
+.rstat { display: flex; flex-direction: column; gap: 1px; padding: 8px 10px; background: var(--surface-2); border-radius: 8px; min-width: 0; }
+.rstat .num { font-size: 18px; font-weight: 500; }
 .projctl { display: inline-flex; align-items: center; gap: 8px; }
 .projctl input[type=range] { width: 160px; accent-color: var(--proj); }
 .projctl input[type=number] { width: 72px; text-align: right; font-family: var(--f-num); }
