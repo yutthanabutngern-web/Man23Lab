@@ -15,6 +15,11 @@ body.auth-locked > .wrap { visibility:hidden; }
 <title>แดชบอร์ดพอร์ตลงทุน</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<!-- Firebase Compatibility Libraries -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
 <style>
 /* Layout: แถบสลับหน้า (ภาพรวม / กรอกข้อมูล) → ภาพรวม: ตัวเลขสรุป, กราฟ+สัดส่วน, ตารางถือครอง, ผลตอบแทนรายเดือน → กรอกข้อมูล: รายเดือน, รายสินทรัพย์, จัดการสินทรัพย์ */
 :root {
@@ -242,6 +247,27 @@ details.how p { margin: 8px 0 0; }
 </div>
 
 <script>
+/* ---------- ตั้งค่า FIREBASE ---------- 
+   กรุณานำข้อมูลจาก Firebase Console มาวางใน firebaseConfig ด้านล่างนี้
+--------------------------------------- */
+var firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+  projectId: "YOUR_PROJECT",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
+var db = null;
+try {
+  if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+  }
+} catch (e) { console.error("Firebase init error:", e); }
+
 (function () {
   'use strict';
   var LS_KEY = 'portfolio-tracker-v1';
@@ -277,7 +303,7 @@ details.how p { margin: 8px 0 0; }
   var nowD = new Date();
   var NOW_KEY = nowD.getFullYear() + '-' + pad(nowD.getMonth() + 1);
 
-  /* ---------- ข้อมูลตัวอย่าง (สร้างในหน้า ไม่ใช่ข้อมูลของคุณ) ---------- */
+  /* ---------- ข้อมูลตัวอย่าง ---------- */
   function makeSample() {
     var seed = 20261106;
     function rnd() { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; }
@@ -315,7 +341,6 @@ details.how p { margin: 8px 0 0; }
   function normalize(d) {
     var o = JSON.parse(JSON.stringify(d || {}));
     var out = { v: 1, sample: !!o.sample, assets: Array.isArray(o.assets) ? o.assets : [], months: o.months && typeof o.months === 'object' ? o.months : {} };
-    // ข้อมูลเก่าที่เก็บผลตอบแทนเป็น % (r) แปลงเป็นมูลค่าปัจจุบัน (v)
     var run = {};
     Object.keys(out.months).sort().forEach(function (k) {
       out.assets.forEach(function (a) {
@@ -331,8 +356,7 @@ details.how p { margin: 8px 0 0; }
 
   /* ---------- สถานะแอป ---------- */
   var S = makeSample();
-  var loaded = false, canWrite = true, mode = 'pending'; // pending | db | local | memory
-  var dbDoc = null;
+  var loaded = false, canWrite = true, mode = 'firebase';
   var page = 'overview', sub = 'month', selMonth = null, selAsset = null, backExtra = 0;
   var rangeN = 12, projH = 12, projC = true, filter = 'all', sort = { k: 'V', dir: -1 };
   var armed = null, armTimer = null;
@@ -412,18 +436,15 @@ details.how p { margin: 8px 0 0; }
   function setStatus(kind) {
     statusKind = kind;
     var el = $('status'), t = '', err = false;
-    if (kind === 'loading') t = 'กำลังโหลดข้อมูลของคุณ…';
-    else if (kind === 'idle') t = sharedLoaded ? 'ข้อมูลติดอยู่กับลิงก์นี้ เปิดเครื่องไหนก็ใช้ชุดเดียวกันได้' : mode === 'db' ? 'ข้อมูลเป็นส่วนตัว เก็บไว้กับบัญชีของคุณ' : mode === 'local' ? 'ข้อมูลอยู่ในเบราว์เซอร์นี้ · กด “สร้างลิงก์พกข้อมูล” เพื่อเปิดเครื่องอื่น' : 'ยังไม่ได้เก็บถาวร ข้อมูลจะหายเมื่อปิดหน้านี้';
-    else if (kind === 'saving') t = 'กำลังบันทึก…';
-    else if (kind === 'saved') t = 'บันทึกแล้ว';
+    if (kind === 'loading') t = 'กำลังโหลดข้อมูลจากคลาวด์…';
+    else if (kind === 'idle') t = db ? 'ซิงค์ข้อมูลกับคลาวด์แล้ว · ทุกอุปกรณ์เห็นค่าเดียวกัน' : 'ใช้ออฟไลน์ (ยังไม่ได้ตั้งค่า Firebase Config)';
+    else if (kind === 'saving') t = 'กำลังบันทึกไปยังคลาวด์…';
+    else if (kind === 'saved') t = 'บันทึกเรียบร้อย';
     else if (kind === 'error') { t = 'บันทึกไม่สำเร็จ'; err = true; }
-    else if (kind === 'nowrite') { t = 'บัญชีนี้ไม่มีสิทธิ์บันทึกข้อมูล ดูได้อย่างเดียว'; err = true; }
-    else if (kind === 'unreach') { t = 'ยังเชื่อมต่อที่เก็บข้อมูลไม่ได้ จึงยังกรอกข้อมูลไม่ได้'; err = true; }
     el.className = 'status' + (err ? ' err' : '');
     el.innerHTML = esc(t) + (kind === 'error' ? '<button data-act="retry">ลองอีกครั้ง</button>' : '');
   }
   function persist() {
-    // อัปเดตลิงก์ทันที เพื่อไม่ให้ข้อมูลค้างอยู่เฉพาะเครื่องต้นทาง
     putShareData();
     dirty = true; setStatus('saving');
     clearTimeout(saveTimer); saveTimer = setTimeout(flush, 700);
@@ -433,65 +454,59 @@ details.how p { margin: 8px 0 0; }
     if (saving) { pendingSave = true; return; }
     saving = true; dirty = false;
     var snap = JSON.parse(JSON.stringify(S));
-    var p;
-    if (mode === 'db' && dbDoc) p = dbDoc.set(snap);
-    else if (mode === 'local') { try { localStorage.setItem(LS_KEY, JSON.stringify(snap)); p = Promise.resolve(); } catch (e) { p = Promise.reject(e); } }
-    else p = Promise.resolve();
-    p.then(function () {
+    
+    if (db) {
+      db.ref('portfolioData').set(snap).then(function() {
+        saving = false;
+        setStatus('saved');
+        if (pendingSave || dirty) { pendingSave = false; dirty = true; flush(); }
+      }).catch(function(e) {
+        saving = false; dirty = true;
+        setStatus('error');
+      });
+    } else {
+      try { localStorage.setItem(LS_KEY, JSON.stringify(snap)); } catch(e){}
       saving = false;
-      // ทำให้ข้อมูลติดไปกับลิงก์: เปิดลิงก์เดียวกันบนอุปกรณ์อื่นก็โหลดชุดข้อมูลเดียวกันได้
-      putShareData();
-      if (pendingSave || dirty) { pendingSave = false; dirty = true; flush(); } else setStatus(mode === 'memory' ? 'idle' : 'saved');
-    }, function (e) {
-      saving = false; dirty = true;
-      if (e && e.code === 'invalid_argument') { canWrite = false; dirty = false; setStatus('nowrite'); renderEntryIfOpen(); }
-      else setStatus('error');
-    });
+      setStatus('saved');
+    }
   }
   document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden' && dirty) { clearTimeout(saveTimer); flush(); } });
 
-  function withTimeout(p, ms) { return Promise.race([p, new Promise(function (r) { setTimeout(function () { r('timeout'); }, ms); })]); }
   function init() {
     render();
     var shared = getShareData();
     if (shared) {
       S = shared;
       sharedLoaded = true;
-      mode = 'local';
+      loaded = true;
+      setStatus('idle');
+      render();
+      return;
+    }
+
+    if (db) {
+      setStatus('loading');
+      db.ref('portfolioData').on('value', function(snapshot) {
+        var val = snapshot.val();
+        if (val) {
+          S = normalize(val);
+        }
+        loaded = true;
+        setStatus('idle');
+        render();
+      }, function(error) {
+        console.error("Firebase fetch error:", error);
+        setStatus('error');
+      });
+    } else {
+      try {
+        var raw = localStorage.getItem(LS_KEY);
+        if (raw) S = normalize(JSON.parse(raw));
+      } catch (e) {}
       loaded = true;
       setStatus('idle');
       render();
     }
-    var hasClaude = window.claude && typeof window.claude.use === 'function';
-    var pDb = hasClaude ? withTimeout(window.claude.use('db'), 10000) : Promise.resolve(null);
-    var pUser = hasClaude ? withTimeout(window.claude.use('user'), 10000) : Promise.resolve(null);
-    Promise.all([pDb, pUser]).then(function (res) {
-      var db = res[0] === 'timeout' ? null : res[0];
-      var user = res[1] === 'timeout' ? null : res[1];
-      if (!db || !user) return null;
-      return Promise.resolve(user.id()).then(function (uid) { return uid ? { db: db, uid: uid } : null; });
-    }).then(function (ctx) {
-      if (shared) {
-        // ลิงก์ที่มีข้อมูลแนบมาเป็นแหล่งข้อมูลหลัก เพื่อให้ข้ามอุปกรณ์ได้
-        return null;
-      }
-      if (ctx) {
-        dbDoc = ctx.db.doc('data/users/' + ctx.uid + '/portfolio');
-        mode = 'db';
-        return withTimeout(dbDoc.get(), 10000).then(function (snap) {
-          if (snap === 'timeout') { setStatus('unreach'); return; }
-          if (snap.exists) S = normalize(snap.data());
-          loaded = true; setStatus('idle'); render();
-        }, function (e) { setStatus(e && e.code === 'revoked' ? 'nowrite' : 'unreach'); });
-      }
-      mode = 'local';
-      try {
-        var raw = localStorage.getItem(LS_KEY);
-        if (raw) S = normalize(JSON.parse(raw));
-      } catch (e) { mode = 'memory'; }
-      loaded = true; setStatus('idle'); render();
-      if (raw) putShareData();
-    }).catch(function () { mode = 'memory'; loaded = true; setStatus('idle'); render(); });
   }
 
   /* ---------- คำนวณ ---------- */
@@ -570,8 +585,6 @@ details.how p { margin: 8px 0 0; }
 
   /* ---------- คาดการณ์ ---------- */
   var HLBL = { 12: '1 ปี', 24: '2 ปี', 60: '5 ปี' };
-  // คาดการณ์จากมูลค่าปัจจุบันของแต่ละสินทรัพย์ ด้วย % เติบโตต่อปีที่กรอกไว้ (เว้นว่าง = 0%)
-  // เงินที่ใส่เพิ่มในอนาคต = ค่าเฉลี่ย 6 เดือนล่าสุดของสินทรัพย์นั้น (ถ้าเปิดใช้)
   function project(C, H, withC) {
     var out = { pts: [], final: {}, totalP: 0, avgTot: 0 };
     if (!C.lastDataKey) return out;
@@ -609,7 +622,6 @@ details.how p { margin: 8px 0 0; }
     var cost = last.c, val = last.v, pl = val - cost, plp = cost > 0 ? (pl / cost) * 100 : 0;
     var ci = C.tl.indexOf(lastKey), c12 = 0, j;
     for (j = Math.max(0, ci - 11); j <= ci; j++) c12 += C.T[C.tl[j]].c;
-    // รายการถือครอง
     var rows = [], byClass = {};
     S.assets.forEach(function (a) {
       var x = cellOf(C, a.id, lastKey);
@@ -908,7 +920,6 @@ details.how p { margin: 8px 0 0; }
     el.innerHTML = sub === 'month' ? monthBody(C) : sub === 'asset' ? assetBody(C) : manageBody();
     updateCalcs();
   }
-  function renderEntryIfOpen() { if (page === 'entry') render(); }
 
   function updateCalcs() {
     var C = compute(), els = document.querySelectorAll('[data-calc]');
