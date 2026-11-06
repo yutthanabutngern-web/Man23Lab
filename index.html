@@ -2,7 +2,16 @@
 <html lang="th">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<style>:root{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<style>:root{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}
+/* ---------- ล็อกหน้าข้อมูลด้วยรหัสผ่าน ---------- */
+#authGate { position:fixed; inset:0; z-index:99999; display:flex; align-items:center; justify-content:center; padding:20px; background:var(--bg); }
+#authGate .auth-card { width:min(420px,100%); background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:24px; box-shadow:0 12px 40px rgba(0,0,0,.12); }
+#authGate h2 { margin:0 0 6px; font-family:var(--f-display); }
+#authGate p { margin:0 0 16px; color:var(--ink-2); font-size:14px; }
+#authGate .auth-input { width:100%; margin:0 0 10px; }
+#authGate .auth-err { min-height:22px; color:var(--dn); font-size:13px; margin:4px 0 10px; }
+body.auth-locked > .wrap { visibility:hidden; }
+</style>
 <title>แดชบอร์ดพอร์ตลงทุน</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -200,6 +209,19 @@ details.how p { margin: 8px 0 0; }
 @media (max-width: 520px) { h1 { font-size: 24px; } }
 </style>
 
+<div id="authGate" aria-modal="true" role="dialog">
+  <div class="auth-card">
+    <h2>🔒 ข้อมูลส่วนตัว</h2>
+    <p>กรุณาใส่รหัสผ่านเพื่อเข้าใช้งานข้อมูลพอร์ต</p>
+    <form id="authForm" autocomplete="off">
+      <label class="cl" for="authPassword">รหัสผ่าน</label>
+      <input id="authPassword" class="field auth-input" type="password" inputmode="text" autocomplete="current-password" placeholder="รหัสผ่าน">
+      <div id="authError" class="auth-err" role="alert"></div>
+      <button class="btn primary" type="submit" style="width:100%">เข้าใช้งาน</button>
+    </form>
+  </div>
+</div>
+
 <div class="wrap">
   <header class="top">
     <div>
@@ -316,6 +338,60 @@ details.how p { margin: 8px 0 0; }
   var ov = null, geo = null;
   var view = $('view');
 
+  /* ---------- การยืนยันตัวตน ---------- */
+  var ACCESS_PASSWORD = '0957070394nooky';
+  var AUTH_KEY = 'portfolio-auth-v1';
+  var SHARE_PARAM = 'p';
+  var authUnlocked = false;
+  function b64uEncode(s) {
+    var bytes = new TextEncoder().encode(s), bin = '';
+    for (var i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  }
+  function b64uDecode(s) {
+    s = String(s).replace(/-/g,'+').replace(/_/g,'/');
+    while (s.length % 4) s += '=';
+    var bin = atob(s), bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  }
+  function getShareData() {
+    try {
+      var raw = new URLSearchParams(location.search).get(SHARE_PARAM);
+      return raw ? normalize(JSON.parse(b64uDecode(raw))) : null;
+    } catch (e) { return null; }
+  }
+  function putShareData() {
+    try {
+      var u = new URL(location.href);
+      u.searchParams.set(SHARE_PARAM, b64uEncode(JSON.stringify(S)));
+      history.replaceState(null, '', u.pathname + '?' + u.searchParams.toString() + (location.hash || '#overview'));
+    } catch (e) {}
+  }
+  function showAuth() {
+    authUnlocked = false;
+    document.body.classList.add('auth-locked');
+    var g = $('authGate'); if (g) g.style.display = 'flex';
+    setTimeout(function(){ var i=$('authPassword'); if(i) i.focus(); }, 0);
+  }
+  function unlock() {
+    authUnlocked = true;
+    document.body.classList.remove('auth-locked');
+    var g = $('authGate'); if (g) g.style.display = 'none';
+    try { sessionStorage.setItem(AUTH_KEY, '1'); } catch(e) {}
+  }
+  function initAuth() {
+    var f = $('authForm');
+    try { if (sessionStorage.getItem(AUTH_KEY) === '1') { unlock(); return; } } catch(e) {}
+    showAuth();
+    f.addEventListener('submit', function(e){
+      e.preventDefault();
+      var v = $('authPassword').value;
+      if (v === ACCESS_PASSWORD) { $('authError').textContent=''; $('authPassword').value=''; unlock(); }
+      else { $('authError').textContent='รหัสผ่านไม่ถูกต้อง'; $('authPassword').select(); }
+    });
+  }
+
   /* ---------- บันทึกข้อมูล ---------- */
   var statusKind = 'loading', saveTimer = null, saving = false, pendingSave = false, dirty = false;
   function setStatus(kind) {
@@ -346,6 +422,8 @@ details.how p { margin: 8px 0 0; }
     else p = Promise.resolve();
     p.then(function () {
       saving = false;
+      // ทำให้ข้อมูลติดไปกับลิงก์: เปิดลิงก์เดียวกันบนอุปกรณ์อื่นก็โหลดชุดข้อมูลเดียวกันได้
+      putShareData();
       if (pendingSave || dirty) { pendingSave = false; dirty = true; flush(); } else setStatus(mode === 'memory' ? 'idle' : 'saved');
     }, function (e) {
       saving = false; dirty = true;
@@ -358,6 +436,14 @@ details.how p { margin: 8px 0 0; }
   function withTimeout(p, ms) { return Promise.race([p, new Promise(function (r) { setTimeout(function () { r('timeout'); }, ms); })]); }
   function init() {
     render();
+    var shared = getShareData();
+    if (shared) {
+      S = shared;
+      mode = 'local';
+      loaded = true;
+      setStatus('idle');
+      render();
+    }
     var hasClaude = window.claude && typeof window.claude.use === 'function';
     var pDb = hasClaude ? withTimeout(window.claude.use('db'), 10000) : Promise.resolve(null);
     var pUser = hasClaude ? withTimeout(window.claude.use('user'), 10000) : Promise.resolve(null);
@@ -367,6 +453,10 @@ details.how p { margin: 8px 0 0; }
       if (!db || !user) return null;
       return Promise.resolve(user.id()).then(function (uid) { return uid ? { db: db, uid: uid } : null; });
     }).then(function (ctx) {
+      if (shared) {
+        // ลิงก์ที่มีข้อมูลแนบมาเป็นแหล่งข้อมูลหลัก เพื่อให้ข้ามอุปกรณ์ได้
+        return null;
+      }
       if (ctx) {
         dbDoc = ctx.db.doc('data/users/' + ctx.uid + '/portfolio');
         mode = 'db';
@@ -382,6 +472,7 @@ details.how p { margin: 8px 0 0; }
         if (raw) S = normalize(JSON.parse(raw));
       } catch (e) { mode = 'memory'; }
       loaded = true; setStatus('idle'); render();
+      if (raw) putShareData();
     }).catch(function () { mode = 'memory'; loaded = true; setStatus('idle'); render(); });
   }
 
@@ -943,6 +1034,7 @@ details.how p { margin: 8px 0 0; }
 
   setStatus('loading');
   page = (location.hash || '').slice(1) === 'entry' ? 'entry' : 'overview';
+  initAuth();
   init();
 })();
 </script>
