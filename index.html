@@ -1,0 +1,862 @@
+<!doctype html>
+<html lang="th">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>แดชบอร์ดพอร์ตลงทุน</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: แถบสลับหน้า (ภาพรวม / กรอกข้อมูล) → ภาพรวม: ตัวเลขสรุป, กราฟ+สัดส่วน, ตารางถือครอง, ผลตอบแทนรายเดือน → กรอกข้อมูล: รายเดือน, รายสินทรัพย์, จัดการสินทรัพย์ */
+:root {
+  --bg: #EDF0F3;
+  --surface: #FFFFFF;
+  --surface-2: #F4F6F8;
+  --line: #DAE0E6;
+  --ink: #15212C;
+  --ink-2: #4B5967;
+  --ink-3: #66737F;
+  --accent: #1D4E89;
+  --accent-soft: #DCE7F4;
+  --up: #0B7F58;
+  --up-soft: #DDF1E8;
+  --dn: #C0352B;
+  --dn-soft: #F8E1DE;
+  --c-th: #2A6CB6;
+  --c-us: #7A5BC0;
+  --c-fund: #17909F;
+  --c-cash: #7B8794;
+  --c-gold: #BC8F25;
+  --c-btc: #D06A32;
+  --f-display: "Bai Jamjuree", "IBM Plex Sans Thai", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans Thai", system-ui, sans-serif;
+  --f-num: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0D1218; --surface: #141B23; --surface-2: #1A232D; --line: #26313D;
+    --ink: #E6ECF2; --ink-2: #A6B3C0; --ink-3: #8794A2;
+    --accent: #6AA6E8; --accent-soft: #1B2C42;
+    --up: #3CC693; --up-soft: #12302A; --dn: #FF7A6E; --dn-soft: #3A1E1D;
+    --c-th: #5C9BE0; --c-us: #A28BE0; --c-fund: #45C0CF; --c-cash: #94A0AD; --c-gold: #E0B54D; --c-btc: #F08C55;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0D1218; --surface: #141B23; --surface-2: #1A232D; --line: #26313D;
+  --ink: #E6ECF2; --ink-2: #A6B3C0; --ink-3: #8794A2;
+  --accent: #6AA6E8; --accent-soft: #1B2C42;
+  --up: #3CC693; --up-soft: #12302A; --dn: #FF7A6E; --dn-soft: #3A1E1D;
+  --c-th: #5C9BE0; --c-us: #A28BE0; --c-fund: #45C0CF; --c-cash: #94A0AD; --c-gold: #E0B54D; --c-btc: #F08C55;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--f-body); font-size: 15px; line-height: 1.55;
+  padding-block: 24px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.num { font-family: var(--f-num); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.up { color: var(--up); } .dn { color: var(--dn); } .flat { color: var(--ink-2); }
+
+header.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 16px; }
+h1 { font-family: var(--f-display); font-weight: 700; font-size: 28px; line-height: 1.2; margin: 0; text-wrap: balance; }
+.sub { color: var(--ink-2); font-size: 14px; margin-top: 4px; }
+.hright { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.status { font-size: 13px; color: var(--ink-2); min-height: 20px; }
+.status button { font: inherit; font-size: 13px; color: var(--accent); background: none; border: 0; padding: 0 0 0 6px; cursor: pointer; text-decoration: underline; }
+.status.err { color: var(--dn); }
+
+.banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; padding: 12px 16px; border-radius: 10px; background: var(--accent-soft); color: var(--ink); font-size: 14px; }
+.banner b { font-weight: 600; }
+.banner .acts { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.btn { font: inherit; font-size: 14px; cursor: pointer; padding: 7px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); font-weight: 500; }
+.btn.danger { border-color: var(--dn); color: var(--dn); }
+.btn.danger.armed { background: var(--dn); color: var(--surface); }
+.btn.sm { padding: 4px 10px; font-size: 13px; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; min-width: 0; }
+.panel h2 { font-family: var(--f-display); font-weight: 600; font-size: 17px; margin: 0; }
+.panel-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.note { color: var(--ink-3); font-size: 13px; }
+.intro { color: var(--ink-2); font-size: 14px; margin: 0 0 14px; max-width: 70ch; }
+
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; }
+.kpi { display: flex; flex-direction: column; gap: 4px; }
+.kpi .lab { font-size: 13px; color: var(--ink-2); }
+.kpi .val { font-family: var(--f-num); font-variant-numeric: tabular-nums; font-size: 26px; font-weight: 500; line-height: 1.2; letter-spacing: -0.02em; overflow-wrap: anywhere; }
+.kpi .meta { font-size: 13px; color: var(--ink-3); }
+.pill { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; font-family: var(--f-num); font-size: 13px; font-variant-numeric: tabular-nums; }
+.pill.up { background: var(--up-soft); } .pill.dn { background: var(--dn-soft); } .pill.flat { background: var(--surface-2); color: var(--ink-2); }
+
+.row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px; }
+@media (max-width: 900px) { .row { grid-template-columns: minmax(0, 1fr); } }
+
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; background: var(--surface-2); padding: 3px; border-radius: 8px; }
+.tabs button, .tabs a, .chips button, th button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; text-decoration: none; }
+.tabs button, .tabs a { padding: 4px 12px; border-radius: 6px; font-size: 13px; color: var(--ink-2); display: inline-block; }
+.tabs button[aria-pressed="true"], .tabs a[aria-current="page"] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 0 0 1px var(--line); }
+.tabs.lg a { padding: 6px 16px; font-size: 14px; }
+
+.chart-wrap { position: relative; width: 100%; }
+.chart-wrap svg { display: block; width: 100%; height: auto; touch-action: pan-y; }
+.legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; color: var(--ink-2); margin-bottom: 8px; }
+.legend i { display: inline-block; width: 18px; height: 0; border-top: 2.5px solid var(--accent); vertical-align: middle; margin-right: 6px; }
+.legend i.dash { border-top: 2px dashed var(--ink-3); }
+.tip { position: absolute; top: 8px; pointer-events: none; background: var(--surface); border: 1px solid var(--line); box-shadow: 0 4px 16px rgba(0,0,0,.12); border-radius: 8px; padding: 8px 10px; font-size: 13px; min-width: 160px; z-index: 2; }
+.tip .d { color: var(--ink-2); margin-bottom: 4px; }
+.tip .r { display: flex; justify-content: space-between; gap: 12px; }
+.ax { fill: var(--ink-3); font-size: 11px; font-family: var(--f-num); }
+.axl { fill: var(--ink-2); font-size: 11px; font-family: var(--f-num); }
+.empty-chart { padding: 48px 12px; text-align: center; color: var(--ink-3); font-size: 14px; }
+
+.alloc { display: flex; flex-direction: column; gap: 14px; }
+.donut { width: 100%; max-width: 220px; margin: 0 auto; display: block; }
+.donut text { text-anchor: middle; fill: var(--ink); }
+.al-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.al-list li { display: grid; grid-template-columns: 10px minmax(0,1fr) auto auto; gap: 10px; align-items: center; font-size: 14px; }
+.al-list .dot { width: 10px; height: 10px; border-radius: 3px; }
+.al-list .pct { font-family: var(--f-num); color: var(--ink-2); font-size: 13px; min-width: 48px; text-align: right; }
+.al-list .amt { font-family: var(--f-num); font-size: 13px; min-width: 84px; text-align: right; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips button { padding: 4px 12px; border-radius: 999px; border: 1px solid var(--line); font-size: 13px; color: var(--ink-2); }
+.chips button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--surface); font-weight: 500; }
+
+.tbl-scroll { overflow-x: auto; margin-inline: -4px; padding-inline: 4px; }
+table { width: 100%; border-collapse: collapse; min-width: 700px; font-size: 14px; }
+th { text-align: right; font-weight: 500; font-size: 12px; color: var(--ink-2); letter-spacing: 0.02em; padding: 0 10px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; padding-left: 0; }
+th button { font-size: 12px; color: var(--ink-2); display: inline-flex; gap: 4px; align-items: center; padding: 2px 0; }
+th[aria-sort="ascending"] button, th[aria-sort="descending"] button { color: var(--ink); font-weight: 600; }
+td { text-align: right; padding: 11px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; vertical-align: middle; }
+tbody tr:last-child td { border-bottom: 0; }
+.asset { display: flex; align-items: center; gap: 10px; white-space: normal; }
+.asset .dot { width: 8px; height: 28px; border-radius: 3px; flex: none; }
+.asset .t { font-family: var(--f-num); font-size: 13px; font-weight: 500; }
+.asset .n { color: var(--ink-3); font-size: 12px; line-height: 1.3; overflow-wrap: anywhere; }
+.w { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.w .bar { width: 56px; height: 6px; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
+.w .bar b { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+.pl-sub { display: block; font-size: 12px; }
+
+.empty { text-align: center; padding: 40px 16px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.empty h2 { font-size: 18px; }
+.empty p { margin: 0; color: var(--ink-2); max-width: 46ch; }
+
+/* ฟอร์มกรอกข้อมูล */
+.ctrl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 14px; }
+.field, select.field {
+  font: inherit; font-size: 16px; color: var(--ink); background: var(--surface-2);
+  border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; min-width: 0; width: 100%;
+}
+select.field { width: auto; min-width: 150px; max-width: 100%; }
+input.field:disabled, select.field:disabled { opacity: .6; cursor: not-allowed; }
+input.in { text-align: right; font-family: var(--f-num); font-variant-numeric: tabular-nums; }
+input[aria-invalid="true"] { border-color: var(--dn); background: var(--dn-soft); }
+.erows { display: flex; flex-direction: column; }
+.ehead, .erow { display: grid; grid-template-columns: minmax(170px, 1.5fr) minmax(120px, 1fr) minmax(120px, 1fr) minmax(120px, 1fr) minmax(120px, 1fr); gap: 10px 12px; align-items: center; }
+.ehead { font-size: 12px; color: var(--ink-2); padding: 0 0 8px; border-bottom: 1px solid var(--line); }
+.ehead span:not(:first-child) { text-align: right; }
+.erow { padding: 9px 0; border-bottom: 1px solid var(--line); }
+.erow.tot { border-bottom: 0; padding-top: 12px; font-weight: 500; }
+.erow .name { min-width: 0; }
+.erow .f { min-width: 0; }
+.erow .calc { text-align: right; font-size: 14px; }
+.cl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.blank-note { min-height: 22px; font-size: 13px; color: var(--ink-2); margin: 10px 0 0; }
+.mng { display: grid; grid-template-columns: minmax(90px, .6fr) minmax(0, 2fr) minmax(130px, .9fr) auto; gap: 8px 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.mng.add { border-bottom: 0; padding-top: 14px; }
+.sec-title { font-family: var(--f-display); font-weight: 600; font-size: 15px; margin: 18px 0 6px; }
+details.how { margin: 0 0 14px; font-size: 14px; color: var(--ink-2); max-width: 70ch; }
+details.how summary { cursor: pointer; color: var(--accent); }
+details.how p { margin: 8px 0 0; }
+
+@media (max-width: 720px) {
+  .ehead { display: none; }
+  .erow { grid-template-columns: minmax(0,1fr) minmax(0,1fr); padding: 12px 0; }
+  .erow .name { grid-column: 1 / -1; }
+  .cl { position: static; width: auto; height: auto; overflow: visible; clip: auto; display: block; font-size: 12px; color: var(--ink-2); margin-bottom: 2px; white-space: normal; }
+  .erow .calc { text-align: left; }
+  .erow .calc .num { font-size: 15px; }
+  .mng { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
+  .mng .nm { grid-column: 1 / -1; }
+  .mng .btn { justify-self: start; }
+}
+@media (max-width: 520px) { h1 { font-size: 24px; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>พอร์ตลงทุนของ Man23_Lab</h1>
+      <div class="sub" id="sub"></div>
+    </div>
+    <div class="hright">
+      <span class="status" id="status" role="status"></span>
+      <nav class="tabs lg" aria-label="หน้า">
+        <a href="#overview" id="nOv">ภาพรวม</a>
+        <a href="#entry" id="nEn">กรอกข้อมูล</a>
+      </nav>
+    </div>
+  </header>
+  <div id="banner"></div>
+  <main id="view"></main>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var LS_KEY = 'portfolio-tracker-v1';
+  var CLASSES = {
+    th:   { name: 'หุ้นไทย',        color: 'var(--c-th)' },
+    us:   { name: 'หุ้นต่างประเทศ', color: 'var(--c-us)' },
+    fund: { name: 'กองทุนรวม',      color: 'var(--c-fund)' },
+    cash: { name: 'ตลาดเงิน',       color: 'var(--c-cash)' },
+    gold: { name: 'ทองคำ',          color: 'var(--c-gold)' },
+    btc:  { name: 'คริปโต',         color: 'var(--c-btc)' }
+  };
+  var MS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  var ML = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+
+  var $ = function (id) { return document.getElementById(id); };
+  var nf0 = new Intl.NumberFormat('th-TH', { maximumFractionDigits: 0 });
+  var nf2 = new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+  function sgn(n) { return n > 0 ? '+' : n < 0 ? '−' : ''; }
+  function bahtS(n) { return (n < 0 && Math.round(n) !== 0 ? '−' : '') + '฿' + nf0.format(Math.abs(Math.round(n))); }
+  function sbaht(n) { return sgn(Math.round(n)) + '฿' + nf0.format(Math.abs(Math.round(n))); }
+  function spct(n) { return sgn(n) + nf2.format(Math.abs(n)) + '%'; }
+  function cls(n) { return n > 0 ? 'up' : n < 0 ? 'dn' : 'flat'; }
+  function arrow(n) { return n > 0 ? '▲' : n < 0 ? '▼' : '–'; }
+
+  /* ---------- เดือน ---------- */
+  function kIdx(k) { var p = k.split('-'); return +p[0] * 12 + (+p[1] - 1); }
+  function idxKey(i) { return Math.floor(i / 12) + '-' + pad((i % 12) + 1); }
+  function mShort(k) { var p = k.split('-'); return MS[+p[1] - 1] + ' ' + pad((+p[0] + 543) % 100); }
+  function mLong(k) { var p = k.split('-'); return ML[+p[1] - 1] + ' ' + (+p[0] + 543); }
+  function mOnly(k) { return MS[+k.split('-')[1] - 1]; }
+  var nowD = new Date();
+  var NOW_KEY = nowD.getFullYear() + '-' + pad(nowD.getMonth() + 1);
+
+  /* ---------- ข้อมูลตัวอย่าง (สร้างในหน้า ไม่ใช่ข้อมูลของคุณ) ---------- */
+  function makeSample() {
+    var seed = 20261106;
+    function rnd() { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; }
+    function gauss() { var u = rnd() || 1e-9, v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+    var defs = [
+      { n: 'แอดวานซ์ อินโฟร์ เซอร์วิส', t: 'ADVANC', c: 'th',   lump: 60000,  dca: 3000, mu: 1.2,  sd: 5 },
+      { n: 'ท่าอากาศยานไทย',            t: 'AOT',    c: 'th',   lump: 50000,  dca: 2000, mu: 0.2,  sd: 6 },
+      { n: 'ธนาคารกสิกรไทย',            t: 'KBANK',  c: 'th',   lump: 50000,  dca: 2500, mu: 0.7,  sd: 5 },
+      { n: 'ซีพี ออลล์',                t: 'CPALL',  c: 'th',   lump: 30000,  dca: 1500, mu: -0.1, sd: 5.5 },
+      { n: 'ปตท.',                      t: 'PTT',    c: 'th',   lump: 40000,  dca: 0,    mu: -0.2, sd: 5 },
+      { n: 'Vanguard S&P 500 ETF',      t: 'VOO',    c: 'us',   lump: 100000, dca: 6000, mu: 1.1,  sd: 4.2 },
+      { n: 'NVIDIA',                    t: 'NVDA',   c: 'us',   lump: 60000,  dca: 4000, mu: 2.2,  sd: 9 },
+      { n: 'กองทุนหุ้นไทย SET50',       t: 'SET50-F', c: 'fund', lump: 80000, dca: 4000, mu: 0.5,  sd: 4 },
+      { n: 'กองทุนตลาดเงิน',            t: 'MM-F',   c: 'cash', lump: 60000,  dca: 1000, mu: 0.17, sd: 0.03 },
+      { n: 'ทองคำแท่ง 96.5%',           t: 'GOLD',   c: 'gold', lump: 100000, dca: 5000, mu: 1.6,  sd: 4.5 },
+      { n: 'Bitcoin',                   t: 'BTC',    c: 'btc',  lump: 150000, dca: 5000, mu: 2.4,  sd: 13 }
+    ];
+    var assets = [], months = {}, endI = kIdx('2026-11'), startI = endI - 23;
+    defs.forEach(function (d, ai) {
+      var id = 's' + ai;
+      assets.push({ id: id, name: d.n, ticker: d.t, cls: d.c });
+      var run = 0;
+      for (var i = startI; i <= endI; i++) {
+        var k = idxKey(i), c = (i === startI ? d.lump : 0) + d.dca;
+        var r = Math.max(-30, d.mu + d.sd * gauss());
+        run = Math.round((run + c) * (1 + r / 100));
+        if (!months[k]) months[k] = {};
+        var e = {}; if (c) e.c = c; e.v = run;
+        months[k][id] = e;
+      }
+    });
+    return { v: 1, sample: true, assets: assets, months: months };
+  }
+  function normalize(d) {
+    var o = JSON.parse(JSON.stringify(d || {}));
+    var out = { v: 1, sample: !!o.sample, assets: Array.isArray(o.assets) ? o.assets : [], months: o.months && typeof o.months === 'object' ? o.months : {} };
+    // ข้อมูลเก่าที่เก็บผลตอบแทนเป็น % (r) แปลงเป็นมูลค่าปัจจุบัน (v)
+    var run = {};
+    Object.keys(out.months).sort().forEach(function (k) {
+      out.assets.forEach(function (a) {
+        var e = out.months[k][a.id]; if (!e) return;
+        var pv = run[a.id] || 0, c = typeof e.c === 'number' ? e.c : 0;
+        if (typeof e.v !== 'number' && typeof e.r === 'number') e.v = Math.round((pv + c) * (1 + e.r / 100));
+        delete e.r;
+        run[a.id] = typeof e.v === 'number' ? e.v : pv + c;
+      });
+    });
+    return out;
+  }
+
+  /* ---------- สถานะแอป ---------- */
+  var S = makeSample();
+  var loaded = false, canWrite = true, mode = 'pending'; // pending | db | local | memory
+  var dbDoc = null;
+  var page = 'overview', sub = 'month', selMonth = null, selAsset = null, backExtra = 0;
+  var rangeN = 12, filter = 'all', sort = { k: 'V', dir: -1 };
+  var armed = null, armTimer = null;
+  var ov = null, geo = null;
+  var view = $('view');
+
+  /* ---------- บันทึกข้อมูล ---------- */
+  var statusKind = 'loading', saveTimer = null, saving = false, pendingSave = false, dirty = false;
+  function setStatus(kind) {
+    statusKind = kind;
+    var el = $('status'), t = '', err = false;
+    if (kind === 'loading') t = 'กำลังโหลดข้อมูลของคุณ…';
+    else if (kind === 'idle') t = mode === 'db' ? 'ข้อมูลเป็นส่วนตัว เก็บไว้กับบัญชีของคุณ' : mode === 'local' ? 'เก็บไว้ในเบราว์เซอร์นี้เท่านั้น' : 'ยังไม่ได้เก็บถาวร ข้อมูลจะหายเมื่อปิดหน้านี้';
+    else if (kind === 'saving') t = 'กำลังบันทึก…';
+    else if (kind === 'saved') t = 'บันทึกแล้ว';
+    else if (kind === 'error') { t = 'บันทึกไม่สำเร็จ'; err = true; }
+    else if (kind === 'nowrite') { t = 'บัญชีนี้ไม่มีสิทธิ์บันทึกข้อมูล ดูได้อย่างเดียว'; err = true; }
+    else if (kind === 'unreach') { t = 'ยังเชื่อมต่อที่เก็บข้อมูลไม่ได้ จึงยังกรอกข้อมูลไม่ได้'; err = true; }
+    el.className = 'status' + (err ? ' err' : '');
+    el.innerHTML = esc(t) + (kind === 'error' ? '<button data-act="retry">ลองอีกครั้ง</button>' : '');
+  }
+  function persist() {
+    dirty = true; setStatus('saving');
+    clearTimeout(saveTimer); saveTimer = setTimeout(flush, 700);
+  }
+  function flush() {
+    if (!dirty) return;
+    if (saving) { pendingSave = true; return; }
+    saving = true; dirty = false;
+    var snap = JSON.parse(JSON.stringify(S));
+    var p;
+    if (mode === 'db' && dbDoc) p = dbDoc.set(snap);
+    else if (mode === 'local') { try { localStorage.setItem(LS_KEY, JSON.stringify(snap)); p = Promise.resolve(); } catch (e) { p = Promise.reject(e); } }
+    else p = Promise.resolve();
+    p.then(function () {
+      saving = false;
+      if (pendingSave || dirty) { pendingSave = false; dirty = true; flush(); } else setStatus(mode === 'memory' ? 'idle' : 'saved');
+    }, function (e) {
+      saving = false; dirty = true;
+      if (e && e.code === 'invalid_argument') { canWrite = false; dirty = false; setStatus('nowrite'); renderEntryIfOpen(); }
+      else setStatus('error');
+    });
+  }
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden' && dirty) { clearTimeout(saveTimer); flush(); } });
+
+  function withTimeout(p, ms) { return Promise.race([p, new Promise(function (r) { setTimeout(function () { r('timeout'); }, ms); })]); }
+  function init() {
+    render();
+    var hasClaude = window.claude && typeof window.claude.use === 'function';
+    var pDb = hasClaude ? withTimeout(window.claude.use('db'), 10000) : Promise.resolve(null);
+    var pUser = hasClaude ? withTimeout(window.claude.use('user'), 10000) : Promise.resolve(null);
+    Promise.all([pDb, pUser]).then(function (res) {
+      var db = res[0] === 'timeout' ? null : res[0];
+      var user = res[1] === 'timeout' ? null : res[1];
+      if (!db || !user) return null;
+      return Promise.resolve(user.id()).then(function (uid) { return uid ? { db: db, uid: uid } : null; });
+    }).then(function (ctx) {
+      if (ctx) {
+        dbDoc = ctx.db.doc('data/users/' + ctx.uid + '/portfolio');
+        mode = 'db';
+        return withTimeout(dbDoc.get(), 10000).then(function (snap) {
+          if (snap === 'timeout') { setStatus('unreach'); return; }
+          if (snap.exists) S = normalize(snap.data());
+          loaded = true; setStatus('idle'); render();
+        }, function (e) { setStatus(e && e.code === 'revoked' ? 'nowrite' : 'unreach'); });
+      }
+      mode = 'local';
+      try {
+        var raw = localStorage.getItem(LS_KEY);
+        if (raw) S = normalize(JSON.parse(raw));
+      } catch (e) { mode = 'memory'; }
+      loaded = true; setStatus('idle'); render();
+    }).catch(function () { mode = 'memory'; loaded = true; setStatus('idle'); render(); });
+  }
+
+  /* ---------- คำนวณ ---------- */
+  var ZERO = { V: 0, C: 0, c: 0, pl: 0, base: 0, blank: false };
+  var ZT = { V: 0, C: 0, c: 0, pl: 0, base: 0, blanks: 0, ret: null };
+  function compute() {
+    var keys = Object.keys(S.months).sort();
+    var nowI = kIdx(NOW_KEY);
+    var lastI = keys.length ? kIdx(keys[keys.length - 1]) : nowI;
+    var endI = Math.max(nowI, lastI);
+    var startI = keys.length ? kIdx(keys[0]) : endI;
+    var tl = [], i;
+    for (i = startI; i <= endI; i++) tl.push(idxKey(i));
+    var A = {}, T = {};
+    S.assets.forEach(function (a) { A[a.id] = {}; });
+    tl.forEach(function (k, ti) {
+      var mo = S.months[k] || {};
+      var t = { V: 0, C: 0, c: 0, pl: 0, base: 0, blanks: 0, ret: null };
+      S.assets.forEach(function (a) {
+        var e = mo[a.id] || {};
+        var c = typeof e.c === 'number' ? e.c : 0;
+        var p = ti ? A[a.id][tl[ti - 1]] : null;
+        var pV = p ? p.V : 0, pC = p ? p.C : 0;
+        var base = pV + c;
+        var hasV = typeof e.v === 'number';
+        var V = hasV ? e.v : base;
+        var cell = { V: V, C: pC + c, c: c, pl: V - base, base: base, blank: base > 0 && !hasV };
+        A[a.id][k] = cell;
+        t.V += V; t.C += cell.C; t.c += c; t.pl += cell.pl; t.base += base; if (cell.blank) t.blanks++;
+      });
+      t.ret = t.base > 0 ? (t.pl / t.base) * 100 : null;
+      T[k] = t;
+    });
+    return { tl: tl, A: A, T: T, lastDataKey: keys.length ? keys[keys.length - 1] : null, endKey: idxKey(endI) };
+  }
+  function cellOf(C, a, m) { return (C.A[a] && C.A[a][m]) || ZERO; }
+  function points(C) {
+    if (!C.lastDataKey) return [];
+    var out = [], started = false, lastI = kIdx(C.lastDataKey);
+    C.tl.forEach(function (k) {
+      if (kIdx(k) > lastI) return;
+      var t = C.T[k];
+      if (!started && t.C !== 0) started = true;
+      if (started) out.push({ k: k, v: t.V, c: t.C, ret: t.ret, pl: t.pl });
+    });
+    return out;
+  }
+  function parseNum(s) {
+    s = String(s).replace(/[,\s฿%]/g, '').replace(/[−–]/g, '-');
+    if (s === '') return null;
+    if (s === '-' || s === '+') return 'pending';
+    if (!/^[-+]?(\d+\.?\d*|\.\d+)$/.test(s)) return undefined;
+    return parseFloat(s);
+  }
+  function setCell(a, m, f, v) {
+    if (!S.months[m]) S.months[m] = {};
+    var e = S.months[m][a] || (S.months[m][a] = {});
+    if (v === null) delete e[f]; else e[f] = v;
+    if (!Object.keys(e).length) delete S.months[m][a];
+    if (!Object.keys(S.months[m]).length) delete S.months[m];
+  }
+
+  /* ---------- ส่วนหัวและแบนเนอร์ ---------- */
+  function renderChrome(C) {
+    $('nOv').setAttribute('aria-current', page === 'overview' ? 'page' : 'false');
+    $('nEn').setAttribute('aria-current', page === 'entry' ? 'page' : 'false');
+    $('sub').textContent = C.lastDataKey ? 'ข้อมูลถึงเดือน ' + mLong(C.lastDataKey) + ' · มูลค่าเป็นบาท' : 'ยังไม่มีข้อมูล · มูลค่าเป็นบาท';
+    var b = $('banner');
+    if (S.sample) {
+      var key = 'clearSample';
+      b.innerHTML = '<div class="banner"><span><b>ข้อมูลตัวอย่าง</b> ใช้ดูหน้าตาเท่านั้น ไม่ใช่ข้อมูลของคุณ ลองแก้ตัวเลขดูได้ แล้วล้างตัวอย่างเมื่อพร้อมเริ่มข้อมูลจริง</span><span class="acts">' +
+        (armed === key ? '<button class="btn danger armed" data-act="clearSample">ยืนยัน ลบข้อมูลตัวอย่างทั้งหมด</button><button class="btn" data-act="disarm">ยกเลิก</button>'
+          : '<button class="btn primary" data-act="clearSample"' + (loaded ? '' : ' disabled') + '>ล้างตัวอย่างและเริ่มข้อมูลของฉัน</button>') + '</span></div>';
+    } else b.innerHTML = '';
+  }
+
+  /* ---------- ภาพรวม ---------- */
+  function kpi(lab, val, meta, vc) {
+    return '<div class="panel kpi"><span class="lab">' + lab + '</span><span class="val ' + (vc || '') + '">' + val + '</span><span class="meta">' + meta + '</span></div>';
+  }
+  function pill(p) { return '<span class="pill ' + cls(p) + '">' + arrow(p) + ' ' + spct(p) + '</span>'; }
+  function emptyOverview() {
+    return '<section class="panel empty"><h2>ยังไม่มีข้อมูลในพอร์ต</h2><p>เพิ่มสินทรัพย์ แล้วกรอกต้นทุนที่ใส่เพิ่มและผลตอบแทนของแต่ละเดือน ภาพรวมจะคำนวณให้อัตโนมัติ</p><a class="btn primary" href="#entry" style="text-decoration:none">ไปหน้ากรอกข้อมูล</a></section>';
+  }
+  function overviewHTML(C) {
+    var pts = points(C);
+    if (!S.assets.length || !pts.length) { ov = null; return emptyOverview(); }
+    var last = pts[pts.length - 1], lastKey = last.k;
+    var cost = last.c, val = last.v, pl = val - cost, plp = cost > 0 ? (pl / cost) * 100 : 0;
+    var ci = C.tl.indexOf(lastKey), c12 = 0, j;
+    for (j = Math.max(0, ci - 11); j <= ci; j++) c12 += C.T[C.tl[j]].c;
+    // รายการถือครอง
+    var rows = [], byClass = {};
+    S.assets.forEach(function (a) {
+      var x = cellOf(C, a.id, lastKey);
+      if (x.V === 0 && x.C === 0) return;
+      var lr = x.base > 0 ? (x.pl / x.base) * 100 : null;
+      rows.push({ id: a.id, t: a.ticker || a.name, n: a.name, cls: a.cls, C: x.C, V: x.V, pl: x.V - x.C, plp: x.C > 0 ? ((x.V - x.C) / x.C) * 100 : 0, lr: lr, w: val > 0 ? (x.V / val) * 100 : 0 });
+      byClass[a.cls] = (byClass[a.cls] || 0) + x.V;
+    });
+    ov = { C: C, pts: pts, lastKey: lastKey, rows: rows, byClass: byClass, total: val };
+    var order = Object.keys(byClass).filter(function (k) { return byClass[k] > 0; }).sort(function (a, b) { return byClass[b] - byClass[a]; });
+    ov.order = order;
+    if (filter !== 'all' && order.indexOf(filter) < 0) filter = 'all';
+
+    var h = '<section class="kpis" aria-label="สรุปพอร์ต">' +
+      kpi('มูลค่าพอร์ตรวม', bahtS(val), 'เงินลงทุนสะสม ' + bahtS(cost)) +
+      kpi('กำไร/ขาดทุนสะสม', sbaht(pl), pill(plp), cls(pl)) +
+      kpi('ผลตอบแทนเดือน' + mOnly(lastKey), last.ret === null ? '–' : spct(last.ret), sbaht(last.pl) + ' ไม่รวมเงินที่ใส่เพิ่ม', last.ret === null ? '' : cls(last.ret)) +
+      kpi('เงินที่ใส่เพิ่ม 12 เดือนล่าสุด', bahtS(c12), 'เฉลี่ย ' + bahtS(c12 / Math.min(12, ci + 1)) + ' ต่อเดือน') +
+      '</section>';
+
+    h += '<div class="row"><section class="panel"><div class="panel-head"><h2>มูลค่าพอร์ตเทียบกับเงินลงทุน</h2><div class="tabs" role="group" aria-label="ช่วงเวลา">' +
+      [[6, '6 เดือน'], [12, '12 เดือน'], [0, 'ทั้งหมด']].map(function (r) { return '<button data-act="range" data-v="' + r[0] + '" aria-pressed="' + (rangeN === r[0]) + '">' + r[1] + '</button>'; }).join('') +
+      '</div></div><div class="legend"><span><i></i>มูลค่าตลาด</span><span><i class="dash"></i>เงินลงทุนสะสม</span></div>' +
+      '<div class="chart-wrap" id="chartWrap"><div class="tip" id="tip" hidden></div></div></section>';
+
+    var C0 = 2 * Math.PI * 76, acc = 0;
+    var ds = '<circle cx="100" cy="100" r="76" fill="none" stroke="var(--surface-2)" stroke-width="26"/>';
+    order.forEach(function (k) {
+      var len = (byClass[k] / val) * C0, seg = Math.max(0, len - 2);
+      ds += '<circle cx="100" cy="100" r="76" fill="none" stroke="' + CLASSES[k].color + '" stroke-width="26" stroke-dasharray="' + seg.toFixed(2) + ' ' + (C0 - seg).toFixed(2) + '" stroke-dashoffset="' + (-acc).toFixed(2) + '" transform="rotate(-90 100 100)"/>';
+      acc += len;
+    });
+    ds += '<text x="100" y="94" font-size="11" style="fill:var(--ink-2)">มูลค่ารวม</text><text x="100" y="116" font-size="19" font-weight="500" font-family="IBM Plex Mono, monospace">' + (val / 1e6).toFixed(2) + ' ล้าน</text>';
+    h += '<section class="panel alloc"><div class="panel-head" style="margin-bottom:0"><h2>สัดส่วนสินทรัพย์</h2></div><svg class="donut" viewBox="0 0 200 200" role="img" aria-label="สัดส่วนสินทรัพย์แยกตามประเภท">' + ds + '</svg><ul class="al-list">' +
+      order.map(function (k) { return '<li><span class="dot" style="background:' + CLASSES[k].color + '"></span><span>' + CLASSES[k].name + '</span><span class="pct">' + nf2.format((byClass[k] / val) * 100) + '%</span><span class="amt">' + bahtS(byClass[k]) + '</span></li>'; }).join('') +
+      '</ul></section></div>';
+
+    var COLS = [['t', 'สินทรัพย์'], ['C', 'เงินลงทุนสะสม'], ['V', 'มูลค่า'], ['plp', 'กำไร/ขาดทุน'], ['lr', 'เดือน' + mOnly(lastKey)], ['w', 'สัดส่วน']];
+    var shown = rows.filter(function (r) { return filter === 'all' || r.cls === filter; });
+    shown.sort(function (a, b) {
+      var x = a[sort.k], y = b[sort.k];
+      if (typeof x === 'string') return sort.dir * x.localeCompare(y);
+      return sort.dir * ((x === null ? -Infinity : x) - (y === null ? -Infinity : y));
+    });
+    h += '<section class="panel"><div class="panel-head"><h2>รายการถือครอง</h2><div class="chips" role="group" aria-label="กรองตามประเภท">' +
+      ['all'].concat(order).map(function (k) { return '<button data-act="filter" data-v="' + k + '" aria-pressed="' + (filter === k) + '">' + (k === 'all' ? 'ทั้งหมด' : CLASSES[k].name) + '</button>'; }).join('') +
+      '</div></div><div class="tbl-scroll"><table><thead><tr>' +
+      COLS.map(function (c) {
+        var on = sort.k === c[0];
+        return '<th scope="col" aria-sort="' + (on ? (sort.dir > 0 ? 'ascending' : 'descending') : 'none') + '"><button data-act="sort" data-k="' + c[0] + '">' + c[1] + ' <span aria-hidden="true">' + (on ? (sort.dir > 0 ? '▲' : '▼') : '') + '</span></button></th>';
+      }).join('') + '</tr></thead><tbody>' +
+      shown.map(function (r) {
+        return '<tr><td><div class="asset"><span class="dot" style="background:' + (CLASSES[r.cls] || CLASSES.cash).color + '"></span><div><div class="t">' + esc(r.t) + '</div><div class="n">' + esc(r.n) + ' · ' + (CLASSES[r.cls] || CLASSES.cash).name + '</div></div></div></td>' +
+          '<td class="num">' + bahtS(r.C) + '</td><td class="num">' + bahtS(r.V) + '</td>' +
+          '<td class="num ' + cls(r.pl) + '">' + sbaht(r.pl) + '<span class="pl-sub">' + arrow(r.plp) + ' ' + spct(r.plp) + '</span></td>' +
+          '<td class="num ' + (r.lr === null ? 'flat' : cls(r.lr)) + '">' + (r.lr === null ? '–' : arrow(r.lr) + ' ' + spct(r.lr)) + '</td>' +
+          '<td><div class="w"><span class="num">' + nf2.format(r.w) + '%</span><span class="bar"><b style="width:' + Math.min(100, r.w * 3).toFixed(1) + '%"></b></span></div></td></tr>';
+      }).join('') + '</tbody></table></div></section>';
+
+    h += '<section class="panel"><div class="panel-head"><h2>ผลตอบแทนรายเดือนของพอร์ต</h2><span class="note">12 เดือนล่าสุด ไม่รวมเงินที่ใส่เพิ่ม</span></div><div class="chart-wrap" id="barsWrap"></div></section>';
+    return h;
+  }
+
+  function niceStep(span, n) {
+    var raw = span / n, mag = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / mag;
+    return (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * mag;
+  }
+  function axisLab(v) { return v >= 1e6 ? (v / 1e6).toFixed(1) + ' ล้าน' : nf0.format(v / 1e3) + ' พัน'; }
+
+  function drawLine() {
+    var wrap = $('chartWrap'); if (!wrap || !ov) return;
+    var tip = $('tip');
+    var old = wrap.querySelector('svg'); if (old) old.remove();
+    var oldMsg = wrap.querySelector('.empty-chart'); if (oldMsg) oldMsg.remove();
+    var data = rangeN ? ov.pts.slice(-rangeN) : ov.pts;
+    if (data.length < 2) { tip.hidden = true; wrap.insertAdjacentHTML('afterbegin', '<div class="empty-chart">ต้องมีข้อมูลอย่างน้อย 2 เดือนจึงจะแสดงกราฟ</div>'); return; }
+    var W = Math.max(280, wrap.clientWidth), H = W < 520 ? 230 : 300;
+    var m = { l: 62, r: 12, t: 10, b: 26 };
+    var iw = W - m.l - m.r, ih = H - m.t - m.b;
+    var lo = Infinity, hi = -Infinity;
+    data.forEach(function (p) { lo = Math.min(lo, p.v, p.c); hi = Math.max(hi, p.v, p.c); });
+    var step = niceStep(Math.max(hi - lo, 1), 4);
+    var y0 = Math.floor(lo / step) * step, y1 = Math.ceil(hi / step) * step;
+    if (y1 === y0) y1 = y0 + step;
+    function X(i) { return m.l + (i / (data.length - 1)) * iw; }
+    function Y(v) { return m.t + ih - ((v - y0) / (y1 - y0)) * ih; }
+    var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="กราฟมูลค่าพอร์ตและเงินลงทุนสะสมรายเดือน">';
+    s += '<defs><linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity=".22"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>';
+    for (var v = y0; v <= y1 + step * 0.01; v += step) {
+      var yy = Y(v).toFixed(1);
+      s += '<line x1="' + m.l + '" x2="' + (W - m.r) + '" y1="' + yy + '" y2="' + yy + '" stroke="var(--line)" stroke-width="1"/><text class="ax" x="' + (m.l - 8) + '" y="' + (+yy + 4) + '" text-anchor="end">' + axisLab(v) + '</text>';
+    }
+    var ticks = Math.min(data.length, W < 520 ? 4 : 6);
+    for (var k = 0; k < ticks; k++) {
+      var idx = ticks === 1 ? 0 : Math.round((k / (ticks - 1)) * (data.length - 1));
+      var anchor = k === 0 ? 'start' : k === ticks - 1 ? 'end' : 'middle';
+      s += '<text class="ax" x="' + X(idx).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="' + anchor + '">' + mShort(data[idx].k) + '</text>';
+    }
+    var lineV = data.map(function (p, i) { return (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(p.v).toFixed(1); }).join('');
+    var lineC = data.map(function (p, i) { return (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(p.c).toFixed(1); }).join('');
+    s += '<path d="' + lineV + 'L' + X(data.length - 1).toFixed(1) + ' ' + (m.t + ih) + 'L' + m.l + ' ' + (m.t + ih) + 'Z" fill="url(#ga)"/>';
+    s += '<path d="' + lineC + '" fill="none" stroke="var(--ink-3)" stroke-width="1.6" stroke-dasharray="5 4"/>';
+    s += '<path d="' + lineV + '" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linejoin="round"/>';
+    s += '<circle cx="' + X(data.length - 1).toFixed(1) + '" cy="' + Y(data[data.length - 1].v).toFixed(1) + '" r="4.5" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/>';
+    s += '<g id="cross" hidden><line id="cl" y1="' + m.t + '" y2="' + (m.t + ih) + '" stroke="var(--ink-3)" stroke-width="1"/><circle id="cd" r="4.5" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/></g>';
+    s += '<rect id="hit" x="' + m.l + '" y="' + m.t + '" width="' + iw + '" height="' + ih + '" fill="transparent"/></svg>';
+    wrap.insertAdjacentHTML('afterbegin', s);
+    geo = { data: data, m: m, iw: iw, W: W, X: X, Y: Y };
+    var hit = $('hit');
+    hit.addEventListener('pointermove', onMove); hit.addEventListener('pointerdown', onMove); hit.addEventListener('pointerleave', onLeave);
+  }
+  function onMove(e) {
+    var wrap = $('chartWrap'), tip = $('tip'), svg = wrap.querySelector('svg'), rect = svg.getBoundingClientRect();
+    var px = (e.clientX - rect.left) * (geo.W / rect.width);
+    var i = Math.round(((px - geo.m.l) / geo.iw) * (geo.data.length - 1));
+    i = Math.max(0, Math.min(geo.data.length - 1, i));
+    var p = geo.data[i], x = geo.X(i), y = geo.Y(p.v);
+    $('cross').removeAttribute('hidden');
+    $('cl').setAttribute('x1', x); $('cl').setAttribute('x2', x);
+    $('cd').setAttribute('cx', x); $('cd').setAttribute('cy', y);
+    var pl = p.v - p.c, plp = p.c > 0 ? (pl / p.c) * 100 : 0;
+    tip.innerHTML = '<div class="d">' + mLong(p.k) + '</div>' +
+      '<div class="r"><span>มูลค่า</span><b class="num">' + bahtS(p.v) + '</b></div>' +
+      '<div class="r"><span>เงินลงทุน</span><span class="num">' + bahtS(p.c) + '</span></div>' +
+      '<div class="r"><span>กำไรสะสม</span><span class="num ' + cls(pl) + '">' + spct(plp) + '</span></div>' +
+      '<div class="r"><span>ผลตอบแทนเดือนนี้</span><span class="num ' + (p.ret === null ? 'flat' : cls(p.ret)) + '">' + (p.ret === null ? '–' : spct(p.ret)) + '</span></div>';
+    tip.hidden = false;
+    var tw = tip.offsetWidth, left = (x / geo.W) * rect.width + 12;
+    if (left + tw > rect.width) left = (x / geo.W) * rect.width - tw - 12;
+    tip.style.left = Math.max(0, left) + 'px';
+  }
+  function onLeave() { var tip = $('tip'); if (tip) tip.hidden = true; var c = $('cross'); if (c) c.setAttribute('hidden', ''); }
+
+  function drawBars() {
+    var el = $('barsWrap'); if (!el || !ov) return;
+    el.innerHTML = '';
+    var data = ov.pts.slice(-12).filter(function (p) { return p.ret !== null; });
+    if (!data.length) { el.innerHTML = '<div class="empty-chart">ยังไม่มีข้อมูลผลตอบแทน</div>'; return; }
+    var W = Math.max(280, el.clientWidth), H = 210;
+    var m = { l: 8, r: 8, t: 22, b: 26 };
+    var iw = W - m.l - m.r, ih = H - m.t - m.b;
+    var lo = Math.min(0, Math.min.apply(null, data.map(function (p) { return p.ret; })));
+    var hi = Math.max(0, Math.max.apply(null, data.map(function (p) { return p.ret; })));
+    if (hi === lo) hi = 1;
+    function Y(v) { return m.t + ih - ((v - lo) / (hi - lo)) * ih; }
+    var bw = iw / data.length, barw = Math.min(40, bw * 0.62), zy = Y(0);
+    var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="ผลตอบแทนรายเดือนของพอร์ต">';
+    s += '<line x1="' + m.l + '" x2="' + (W - m.r) + '" y1="' + zy.toFixed(1) + '" y2="' + zy.toFixed(1) + '" stroke="var(--ink-3)" stroke-width="1"/>';
+    data.forEach(function (p, i) {
+      var cx = m.l + (i + 0.5) * bw, y = Y(p.ret), top = Math.min(y, zy), hh = Math.max(2, Math.abs(y - zy));
+      s += '<rect x="' + (cx - barw / 2).toFixed(1) + '" y="' + top.toFixed(1) + '" width="' + barw.toFixed(1) + '" height="' + hh.toFixed(1) + '" rx="3" fill="' + (p.ret >= 0 ? 'var(--up)' : 'var(--dn)') + '"><title>' + mLong(p.k) + ' ' + spct(p.ret) + '</title></rect>';
+      if (W >= 520) s += '<text class="axl" x="' + cx.toFixed(1) + '" y="' + (p.ret >= 0 ? top - 5 : top + hh + 12).toFixed(1) + '" text-anchor="middle">' + nf2.format(p.ret) + '</text>';
+      s += '<text class="ax" x="' + cx.toFixed(1) + '" y="' + (H - 7) + '" text-anchor="middle">' + mOnly(p.k) + '</text>';
+    });
+    el.innerHTML = s + '</svg>';
+  }
+  function drawCharts() { if (page === 'overview') { drawLine(); drawBars(); } }
+
+  /* ---------- กรอกข้อมูล ---------- */
+  function ro() { return !(loaded && canWrite); }
+  function displayMonths(C) {
+    var endI = kIdx(C.endKey), startI = Math.min(kIdx(C.tl[0]), endI - 23) - backExtra, out = [], i;
+    for (i = startI; i <= endI; i++) out.push(idxKey(i));
+    return out;
+  }
+  function dotFor(a) { return '<span class="dot" style="background:' + (CLASSES[a.cls] || CLASSES.cash).color + ';width:8px;height:28px;border-radius:3px;flex:none"></span>'; }
+  function nameCell(a) {
+    return '<div class="name"><div class="asset">' + dotFor(a) + '<div><div class="t">' + esc(a.ticker || a.name) + '</div><div class="n">' + esc(a.name) + ' · ' + (CLASSES[a.cls] || CLASSES.cash).name + '</div></div></div></div>';
+  }
+  function inp(id, a, m, f, raw, ph, label, ctx) {
+    return '<div class="f"><label class="cl" for="' + id + '">' + label + '</label><input class="field in" id="' + id + '" inputmode="decimal" autocomplete="off" data-a="' + esc(a) + '" data-m="' + m + '" data-f="' + f + '" value="' + (raw === undefined || raw === null ? '' : raw) + '" placeholder="' + ph + '" aria-label="' + esc(label + ' ' + ctx) + '"' + (ro() ? ' disabled' : '') + '></div>';
+  }
+  function calcCell(label, kind, a, m) {
+    return '<div class="f calc"><span class="cl">' + label + '</span><span class="num" data-calc="' + kind + '" data-a="' + esc(a || '') + '" data-m="' + m + '"></span></div>';
+  }
+  var HEAD = '<div class="ehead"><span>@@FIRST@@</span><span>ต้นทุนที่ใส่เพิ่ม (฿)</span><span>มูลค่าปัจจุบัน (฿)</span><span>ผลตอบแทนเดือนนี้</span><span>กำไร/ขาดทุนเดือนนี้</span></div>';
+  var HOW = '<details class="how"><summary>วิธีคิดมูลค่า</summary><p>ใส่ต้นทุนที่เติมเพิ่มในเดือนนั้น (ใส่ค่าติดลบถ้าถอนออก) และมูลค่าปัจจุบันของสินทรัพย์ ณ สิ้นเดือน ตามที่เห็นในแอปโบรกเกอร์หรือกองทุน ระบบคำนวณให้: กำไรเดือนนี้ = มูลค่าปัจจุบัน − (มูลค่าเดือนก่อน + ต้นทุนที่เติมเพิ่ม) และผลตอบแทน = กำไรเดือนนี้ ÷ (มูลค่าเดือนก่อน + ต้นทุนที่เติมเพิ่ม) ช่องมูลค่าที่เว้นว่างถือว่ามูลค่าเท่าเดิม ตัวเลขจางในช่องคือมูลค่าที่ระบบสมมติให้</p></details>';
+  function noAssets() {
+    return '<div class="empty"><p>ยังไม่มีสินทรัพย์ในพอร์ต เพิ่มสินทรัพย์แรกก่อน แล้วค่อยกรอกข้อมูลรายเดือน</p><button class="btn primary" data-act="sub" data-v="manage">เพิ่มสินทรัพย์</button></div>';
+  }
+
+  function monthBody(C) {
+    if (!S.assets.length) return noAssets();
+    var months = displayMonths(C);
+    if (!selMonth || months.indexOf(selMonth) < 0) selMonth = C.endKey;
+    var si = months.indexOf(selMonth), m = selMonth;
+    var h = HOW + '<div class="ctrl"><button class="btn" data-act="prevM" aria-label="เดือนก่อนหน้า"' + (si <= 0 ? ' disabled' : '') + '>‹</button>' +
+      '<select class="field" id="mSel" aria-label="เลือกเดือน">' + months.slice().reverse().map(function (k) { return '<option value="' + k + '"' + (k === m ? ' selected' : '') + '>' + mLong(k) + '</option>'; }).join('') + '</select>' +
+      '<button class="btn" data-act="nextM" aria-label="เดือนถัดไป"' + (si >= months.length - 1 ? ' disabled' : '') + '>›</button>' +
+      '<button class="btn" data-act="backMore">เพิ่มเดือนย้อนหลัง</button>' +
+      '<button class="btn" data-act="copyPrev"' + (ro() ? ' disabled' : '') + '>คัดลอกต้นทุนจากเดือนก่อน</button><span class="note" id="copyNote"></span></div>';
+    h += '<div class="erows">' + HEAD.replace('@@FIRST@@', 'สินทรัพย์');
+    var mo = S.months[m] || {};
+    S.assets.forEach(function (a) {
+      var e = mo[a.id] || {};
+      h += '<div class="erow">' + nameCell(a) +
+        inp('c_' + a.id, a.id, m, 'c', e.c, '0', 'ต้นทุนที่ใส่เพิ่ม (฿)', (a.ticker || a.name) + ' ' + mLong(m)) +
+        inp('v_' + a.id, a.id, m, 'v', e.v, '0', 'มูลค่าปัจจุบัน (฿)', (a.ticker || a.name) + ' ' + mLong(m)) +
+        calcCell('ผลตอบแทนเดือนนี้', 'r', a.id, m) + calcCell('กำไร/ขาดทุนเดือนนี้', 'p', a.id, m) + '</div>';
+    });
+    h += '<div class="erow tot"><div class="name">รวมทุกสินทรัพย์</div>' +
+      calcCell('ต้นทุนที่ใส่เพิ่มรวม', 'tc', '', m) + calcCell('มูลค่าปัจจุบันรวม', 'tv', '', m) +
+      calcCell('ผลตอบแทนพอร์ต', 'tr', '', m) + calcCell('กำไร/ขาดทุนเดือนนี้', 'tp', '', m) + '</div></div>';
+    h += '<p class="blank-note" id="blankNote"></p>';
+    return h;
+  }
+  function assetBody(C) {
+    if (!S.assets.length) return noAssets();
+    if (!selAsset || !S.assets.some(function (a) { return a.id === selAsset; })) selAsset = S.assets[0].id;
+    var a = S.assets.filter(function (x) { return x.id === selAsset; })[0];
+    var months = displayMonths(C).slice().reverse();
+    var h = HOW + '<div class="ctrl"><select class="field" id="aSel" aria-label="เลือกสินทรัพย์">' +
+      S.assets.map(function (x) { return '<option value="' + esc(x.id) + '"' + (x.id === selAsset ? ' selected' : '') + '>' + esc((x.ticker ? x.ticker + ' · ' : '') + x.name) + '</option>'; }).join('') +
+      '</select><span class="note">เรียงจากเดือนล่าสุดลงไป</span></div><div class="erows">' + HEAD.replace('@@FIRST@@', 'เดือน');
+    months.forEach(function (k) {
+      var e = (S.months[k] || {})[a.id] || {};
+      h += '<div class="erow"><div class="name"><div class="t" style="font-weight:500">' + mLong(k) + '</div></div>' +
+        inp('c_' + k, a.id, k, 'c', e.c, '0', 'ต้นทุนที่ใส่เพิ่ม (฿)', (a.ticker || a.name) + ' ' + mLong(k)) +
+        inp('v_' + k, a.id, k, 'v', e.v, '0', 'มูลค่าปัจจุบัน (฿)', (a.ticker || a.name) + ' ' + mLong(k)) +
+        calcCell('ผลตอบแทนเดือนนี้', 'r', a.id, k) + calcCell('กำไร/ขาดทุนเดือนนี้', 'p', a.id, k) + '</div>';
+    });
+    h += '</div><div class="ctrl" style="margin:14px 0 0"><button class="btn" data-act="backMore">เพิ่มเดือนย้อนหลัง 12 เดือน</button></div>';
+    return h;
+  }
+  function manageBody() {
+    var clsOpts = function (sel) { return Object.keys(CLASSES).map(function (k) { return '<option value="' + k + '"' + (k === sel ? ' selected' : '') + '>' + CLASSES[k].name + '</option>'; }).join(''); };
+    var dis = ro() ? ' disabled' : '';
+    var h = '<p class="intro">เพิ่ม แก้ไข หรือลบสินทรัพย์ที่คุณถือ การลบสินทรัพย์จะลบข้อมูลรายเดือนของสินทรัพย์นั้นไปด้วย</p>';
+    S.assets.forEach(function (a) {
+      var key = 'del:' + a.id;
+      h += '<div class="mng"><input class="field mi" data-a="' + esc(a.id) + '" data-f="ticker" value="' + esc(a.ticker || '') + '" placeholder="ชื่อย่อ" aria-label="ชื่อย่อ"' + dis + '>' +
+        '<input class="field mi nm" data-a="' + esc(a.id) + '" data-f="name" value="' + esc(a.name) + '" placeholder="ชื่อสินทรัพย์" aria-label="ชื่อสินทรัพย์"' + dis + '>' +
+        '<select class="field mc" data-a="' + esc(a.id) + '" aria-label="ประเภท"' + dis + '>' + clsOpts(a.cls) + '</select>' +
+        '<button class="btn danger sm' + (armed === key ? ' armed' : '') + '" data-act="delAsset" data-a="' + esc(a.id) + '"' + dis + '>' + (armed === key ? 'ยืนยันลบ' : 'ลบ') + '</button></div>';
+    });
+    h += '<div class="sec-title">เพิ่มสินทรัพย์ใหม่</div><div class="mng add"><input class="field" id="nTick" placeholder="ชื่อย่อ เช่น PTT" aria-label="ชื่อย่อสินทรัพย์ใหม่"' + dis + '>' +
+      '<input class="field nm" id="nName" placeholder="ชื่อสินทรัพย์" aria-label="ชื่อสินทรัพย์ใหม่"' + dis + '>' +
+      '<select class="field" id="nCls" aria-label="ประเภทสินทรัพย์ใหม่"' + dis + '>' + clsOpts('th') + '</select>' +
+      '<button class="btn primary" data-act="addAsset"' + dis + '>เพิ่ม</button></div><p class="blank-note" id="addNote"></p>';
+    var k2 = 'clearAll';
+    h += '<div class="sec-title">ล้างข้อมูล</div><p class="intro">ลบสินทรัพย์และข้อมูลรายเดือนทั้งหมดเพื่อเริ่มใหม่ ย้อนกลับไม่ได้</p>' +
+      (armed === k2 ? '<button class="btn danger armed" data-act="clearAll">ยืนยัน ลบข้อมูลทั้งหมด</button> <button class="btn" data-act="disarm">ยกเลิก</button>'
+        : '<button class="btn danger" data-act="clearAll"' + dis + '>ล้างข้อมูลทั้งหมด</button>');
+    return h;
+  }
+  function entryHTML(C) {
+    var tabs = [['month', 'รายเดือน'], ['asset', 'รายสินทรัพย์'], ['manage', 'จัดการสินทรัพย์']];
+    return '<section class="panel"><div class="panel-head"><h2>กรอกข้อมูลลงทุน</h2><div class="tabs" role="group" aria-label="รูปแบบการกรอก">' +
+      tabs.map(function (t) { return '<button data-act="sub" data-v="' + t[0] + '" aria-pressed="' + (sub === t[0]) + '">' + t[1] + '</button>'; }).join('') +
+      '</div></div><div id="entryBody">' + (sub === 'month' ? monthBody(C) : sub === 'asset' ? assetBody(C) : manageBody()) + '</div></section>';
+  }
+  function renderEntryBody() {
+    var C = compute(), el = $('entryBody');
+    if (!el) return;
+    el.innerHTML = sub === 'month' ? monthBody(C) : sub === 'asset' ? assetBody(C) : manageBody();
+    updateCalcs();
+  }
+  function renderEntryIfOpen() { if (page === 'entry') render(); }
+
+  function updateCalcs() {
+    var C = compute(), els = document.querySelectorAll('[data-calc]');
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i], t = el.dataset.calc, a = el.dataset.a, m = el.dataset.m, txt = '', c = '';
+      if (t === 'r' || t === 'p') {
+        var cell = cellOf(C, a, m);
+        if (t === 'r') { var rr = cell.base > 0 ? (cell.pl / cell.base) * 100 : null; txt = rr === null ? '–' : spct(rr); c = rr === null ? 'flat' : cls(rr); }
+        else { txt = sbaht(cell.pl); c = cls(cell.pl); }
+      } else {
+        var T = C.T[m] || ZT;
+        if (t === 'tc') txt = bahtS(T.c);
+        else if (t === 'tr') { txt = T.ret === null ? '–' : spct(T.ret); c = T.ret === null ? 'flat' : cls(T.ret); }
+        else if (t === 'tv') txt = bahtS(T.V);
+        else if (t === 'tp') { txt = sbaht(T.pl); c = cls(T.pl); }
+      }
+      el.textContent = txt; el.className = 'num ' + c;
+    }
+    var vin = document.querySelectorAll('input.in[data-f="v"]');
+    for (var j = 0; j < vin.length; j++) { if (!vin[j].value) vin[j].placeholder = nf0.format(Math.round(cellOf(C, vin[j].dataset.a, vin[j].dataset.m).base)); }
+    var bn = $('blankNote');
+    if (bn) { var TT = C.T[selMonth] || ZT; bn.textContent = TT.blanks ? 'ยังไม่ได้กรอกมูลค่าปัจจุบัน ' + TT.blanks + ' รายการ ระบบนับว่ามูลค่าเท่าเดิมไปก่อน' : ''; }
+  }
+
+  /* ---------- วาดหน้า ---------- */
+  function render() {
+    var C = compute();
+    renderChrome(C);
+    view.innerHTML = page === 'overview' ? overviewHTML(C) : entryHTML(C);
+    if (page === 'overview') drawCharts(); else updateCalcs();
+  }
+  function route() {
+    var h = (location.hash || '#overview').slice(1);
+    page = h === 'entry' ? 'entry' : 'overview';
+    render();
+  }
+  window.addEventListener('hashchange', route);
+
+  /* ---------- เหตุการณ์ ---------- */
+  function arm(key) {
+    armed = key; clearTimeout(armTimer);
+    armTimer = setTimeout(function () { armed = null; render(); }, 5000);
+  }
+  function disarm() { armed = null; clearTimeout(armTimer); }
+
+  view.addEventListener('input', function (e) {
+    var el = e.target;
+    if (el.classList.contains('in')) {
+      var raw = el.value, v = parseNum(raw), f = el.dataset.f;
+      if (v === 'pending') { el.removeAttribute('aria-invalid'); return; }
+      if (v === undefined || (f === 'v' && v !== null && v < 0)) { el.setAttribute('aria-invalid', 'true'); return; }
+      el.removeAttribute('aria-invalid');
+      setCell(el.dataset.a, el.dataset.m, f, v);
+      persist(); updateCalcs();
+    } else if (el.classList.contains('mi')) {
+      var a = S.assets.filter(function (x) { return x.id === el.dataset.a; })[0];
+      if (a) { a[el.dataset.f] = el.value; persist(); }
+    }
+  });
+  view.addEventListener('change', function (e) {
+    var el = e.target;
+    if (el.id === 'mSel') { selMonth = el.value; renderEntryBody(); }
+    else if (el.id === 'aSel') { selAsset = el.value; renderEntryBody(); }
+    else if (el.classList.contains('mc')) {
+      var a = S.assets.filter(function (x) { return x.id === el.dataset.a; })[0];
+      if (a) { a.cls = el.value; persist(); }
+    }
+  });
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-act]');
+    if (!b) return;
+    var act = b.dataset.act, C, months, si;
+    if (act === 'retry') { flush(); return; }
+    if (act === 'disarm') { disarm(); render(); return; }
+    if (act === 'range') { rangeN = +b.dataset.v; render(); }
+    else if (act === 'filter') { filter = b.dataset.v; render(); }
+    else if (act === 'sort') { var k = b.dataset.k; if (sort.k === k) sort.dir = -sort.dir; else { sort.k = k; sort.dir = k === 't' ? 1 : -1; } render(); }
+    else if (act === 'sub') { sub = b.dataset.v; if (page !== 'entry') { location.hash = '#entry'; } else render(); }
+    else if (act === 'backMore') { backExtra += 12; renderEntryBody(); }
+    else if (act === 'prevM' || act === 'nextM') {
+      C = compute(); months = displayMonths(C); si = months.indexOf(selMonth || C.endKey);
+      si += act === 'prevM' ? -1 : 1;
+      if (si >= 0 && si < months.length) { selMonth = months[si]; renderEntryBody(); }
+    }
+    else if (act === 'copyPrev') {
+      var prevK = idxKey(kIdx(selMonth) - 1), changed = false;
+      S.assets.forEach(function (a) {
+        var pe = (S.months[prevK] || {})[a.id], ce = (S.months[selMonth] || {})[a.id];
+        if (pe && typeof pe.c === 'number' && !(ce && typeof ce.c === 'number')) { setCell(a.id, selMonth, 'c', pe.c); changed = true; }
+      });
+      if (changed) { persist(); renderEntryBody(); }
+      else { var n = $('copyNote'); if (n) n.textContent = 'ไม่มีต้นทุนเดือนก่อนให้คัดลอก'; }
+    }
+    else if (act === 'addAsset') {
+      var name = $('nName').value.trim(), tick = $('nTick').value.trim();
+      if (!name && !tick) { $('addNote').textContent = 'ใส่ชื่อหรือชื่อย่อของสินทรัพย์ก่อน'; return; }
+      var id = 'a' + Date.now().toString(36) + Math.floor(Math.random() * 1296).toString(36);
+      S.assets.push({ id: id, name: name || tick, ticker: tick, cls: $('nCls').value });
+      selAsset = selAsset || id;
+      persist(); renderEntryBody();
+    }
+    else if (act === 'delAsset') {
+      var key = 'del:' + b.dataset.a;
+      if (armed !== key) { arm(key); renderEntryBody(); return; }
+      var aid = b.dataset.a;
+      S.assets = S.assets.filter(function (x) { return x.id !== aid; });
+      Object.keys(S.months).forEach(function (mk) { delete S.months[mk][aid]; if (!Object.keys(S.months[mk]).length) delete S.months[mk]; });
+      if (selAsset === aid) selAsset = null;
+      disarm(); persist(); renderEntryBody();
+    }
+    else if (act === 'clearAll' || act === 'clearSample') {
+      if (armed !== act) { arm(act); render(); return; }
+      disarm();
+      S = { v: 1, sample: false, assets: [], months: {} };
+      selMonth = null; selAsset = null; backExtra = 0; sub = 'manage';
+      persist();
+      if (location.hash !== '#entry') location.hash = '#entry'; else render();
+      if (act === 'clearSample') render();
+    }
+  });
+
+  if (window.ResizeObserver) {
+    var lastW = view.clientWidth;
+    new ResizeObserver(function () { if (view.clientWidth !== lastW) { lastW = view.clientWidth; drawCharts(); } }).observe(view);
+  } else window.addEventListener('resize', drawCharts);
+
+  setStatus('loading');
+  page = (location.hash || '').slice(1) === 'entry' ? 'entry' : 'overview';
+  init();
+})();
+</script>
+
+</html>
