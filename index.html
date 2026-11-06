@@ -230,6 +230,7 @@ details.how p { margin: 8px 0 0; }
     </div>
     <div class="hright">
       <span class="status" id="status" role="status"></span>
+      <button class="btn sm" data-act="share" type="button">สร้างลิงก์พกข้อมูล</button>
       <nav class="tabs lg" aria-label="หน้า">
         <a href="#overview" id="nOv">ภาพรวม</a>
         <a href="#entry" id="nEn">กรอกข้อมูล</a>
@@ -343,6 +344,7 @@ details.how p { margin: 8px 0 0; }
   var AUTH_KEY = 'portfolio-auth-v1';
   var SHARE_PARAM = 'p';
   var authUnlocked = false;
+  var sharedLoaded = false;
   function b64uEncode(s) {
     var bytes = new TextEncoder().encode(s), bin = '';
     for (var i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
@@ -380,6 +382,19 @@ details.how p { margin: 8px 0 0; }
     var g = $('authGate'); if (g) g.style.display = 'none';
     try { sessionStorage.setItem(AUTH_KEY, '1'); } catch(e) {}
   }
+  function copyShareLink() {
+    putShareData();
+    var url = location.href;
+    function done() {
+      var b = document.querySelector('[data-act=share]');
+      if (b) { var old = b.textContent; b.textContent = 'คัดลอกแล้ว ✓'; setTimeout(function(){ b.textContent = old; }, 1400); }
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(done).catch(function(){ prompt('คัดลอกลิงก์นี้ไปเปิดบนอุปกรณ์อื่น', url); });
+    } else {
+      prompt('คัดลอกลิงก์นี้ไปเปิดบนอุปกรณ์อื่น', url);
+    }
+  }
   function initAuth() {
     var f = $('authForm');
     try { if (sessionStorage.getItem(AUTH_KEY) === '1') { unlock(); return; } } catch(e) {}
@@ -398,7 +413,7 @@ details.how p { margin: 8px 0 0; }
     statusKind = kind;
     var el = $('status'), t = '', err = false;
     if (kind === 'loading') t = 'กำลังโหลดข้อมูลของคุณ…';
-    else if (kind === 'idle') t = mode === 'db' ? 'ข้อมูลเป็นส่วนตัว เก็บไว้กับบัญชีของคุณ' : mode === 'local' ? 'เก็บไว้ในเบราว์เซอร์นี้เท่านั้น' : 'ยังไม่ได้เก็บถาวร ข้อมูลจะหายเมื่อปิดหน้านี้';
+    else if (kind === 'idle') t = sharedLoaded ? 'ข้อมูลติดอยู่กับลิงก์นี้ เปิดเครื่องไหนก็ใช้ชุดเดียวกันได้' : mode === 'db' ? 'ข้อมูลเป็นส่วนตัว เก็บไว้กับบัญชีของคุณ' : mode === 'local' ? 'ข้อมูลอยู่ในเบราว์เซอร์นี้ · กด “สร้างลิงก์พกข้อมูล” เพื่อเปิดเครื่องอื่น' : 'ยังไม่ได้เก็บถาวร ข้อมูลจะหายเมื่อปิดหน้านี้';
     else if (kind === 'saving') t = 'กำลังบันทึก…';
     else if (kind === 'saved') t = 'บันทึกแล้ว';
     else if (kind === 'error') { t = 'บันทึกไม่สำเร็จ'; err = true; }
@@ -408,6 +423,8 @@ details.how p { margin: 8px 0 0; }
     el.innerHTML = esc(t) + (kind === 'error' ? '<button data-act="retry">ลองอีกครั้ง</button>' : '');
   }
   function persist() {
+    // อัปเดตลิงก์ทันที เพื่อไม่ให้ข้อมูลค้างอยู่เฉพาะเครื่องต้นทาง
+    putShareData();
     dirty = true; setStatus('saving');
     clearTimeout(saveTimer); saveTimer = setTimeout(flush, 700);
   }
@@ -439,6 +456,7 @@ details.how p { margin: 8px 0 0; }
     var shared = getShareData();
     if (shared) {
       S = shared;
+      sharedLoaded = true;
       mode = 'local';
       loaded = true;
       setStatus('idle');
@@ -972,6 +990,7 @@ details.how p { margin: 8px 0 0; }
     if (!b) return;
     var act = b.dataset.act, C, months, si;
     if (act === 'retry') { flush(); return; }
+    if (act === 'share') { copyShareLink(); return; }
     if (act === 'disarm') { disarm(); render(); return; }
     if (act === 'range') { rangeN = +b.dataset.v; render(); }
     else if (act === 'filter') { filter = b.dataset.v; render(); }
