@@ -212,6 +212,25 @@ details.how p { margin: 8px 0 0; }
   .mng .btn { justify-self: start; }
 }
 @media (max-width: 520px) { h1 { font-size: 24px; } }
+
+/* ---------- หน้ารายรับรายจ่าย ---------- */
+.cf-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr); gap:12px; }
+.cf-card { background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:14px; }
+.cf-card .lab { color:var(--ink-2); font-size:13px; }
+.cf-card .val { display:block; margin-top:2px; font-family:var(--f-num); font-size:22px; }
+.cf-form { display:grid; grid-template-columns:120px minmax(140px,1fr) minmax(120px,.8fr) minmax(160px,1.2fr) auto; gap:8px; align-items:center; }
+.cf-table { width:100%; min-width:720px; border-collapse:collapse; font-size:14px; }
+.cf-table th { text-align:left; color:var(--ink-2); font-size:12px; font-weight:500; padding:0 8px 8px; border-bottom:1px solid var(--line); }
+.cf-table th.num, .cf-table td.num { text-align:right; }
+.cf-table td { padding:9px 8px; border-bottom:1px solid var(--line); vertical-align:middle; }
+.cf-table td:first-child { padding-left:0; }
+.cf-table td:last-child { padding-right:0; text-align:right; }
+.cf-type { display:inline-flex; padding:2px 8px; border-radius:999px; font-size:12px; }
+.cf-type.income { background:var(--up-soft); color:var(--up); }
+.cf-type.expense { background:var(--dn-soft); color:var(--dn); }
+.cf-total { font-family:var(--f-num); font-size:15px; font-weight:500; }
+@media (max-width: 800px) { .cf-grid { grid-template-columns:1fr; } .cf-form { grid-template-columns:1fr 1fr; } .cf-form .wide { grid-column:1/-1; } }
+@media (max-width: 520px) { .cf-form { grid-template-columns:1fr; } .cf-form .wide { grid-column:auto; } }
 </style>
 
 <div id="authGate" aria-modal="true" role="dialog">
@@ -240,6 +259,7 @@ details.how p { margin: 8px 0 0; }
       <nav class="tabs lg" aria-label="หน้า">
         <a href="#overview" id="nOv">ภาพรวม</a>
         <a href="#entry" id="nEn">กรอกข้อมูล</a>
+        <a href="#cashflow" id="nCf">รายรับรายจ่าย</a>
         <a href="#debt" id="nDe">หนี้สิน</a>
       </nav>
     </div>
@@ -353,14 +373,15 @@ try {
         debtMonths[dk][d.id] = { b: bal[d.id], p: pay };
       });
     }
-    return { v: 1, sample: true, assets: assets, months: months, debts: debts, debtMonths: debtMonths };
+    return { v: 1, sample: true, assets: assets, months: months, debts: debts, debtMonths: debtMonths, cashflow: {} };
   }
   function normalize(d) {
     var o = JSON.parse(JSON.stringify(d || {}));
     var out = { v: 1, sample: !!o.sample, assets: Array.isArray(o.assets) ? o.assets : [], months: o.months && typeof o.months === 'object' ? o.months : {},
       debts: Array.isArray(o.debts) ? o.debts : (o.debts && typeof o.debts === 'object' ? Object.keys(o.debts).map(function (k) { return o.debts[k]; }) : []),
-      debtMonths: o.debtMonths && typeof o.debtMonths === 'object' ? o.debtMonths : {} };
-    [out.months, out.debtMonths].forEach(function (mm) { Object.keys(mm).forEach(function (k) { if (!/^\d{4}-\d{2}$/.test(k)) delete mm[k]; }); });
+      debtMonths: o.debtMonths && typeof o.debtMonths === 'object' ? o.debtMonths : {},
+      cashflow: o.cashflow && typeof o.cashflow === 'object' ? o.cashflow : {} };
+    [out.months, out.debtMonths, out.cashflow].forEach(function (mm) { Object.keys(mm).forEach(function (k) { if (!/^\d{4}-\d{2}$/.test(k)) delete mm[k]; }); });
     var run = {};
     Object.keys(out.months).sort().forEach(function (k) {
       out.assets.forEach(function (a) {
@@ -377,7 +398,7 @@ try {
   /* ---------- สถานะแอป ---------- */
   var S = makeSample();
   var loaded = false, canWrite = true, mode = 'firebase';
-  var page = 'overview', sub = 'month', selMonth = null, selAsset = null, backExtra = 0;
+  var page = 'overview', sub = 'month', selMonth = null, selAsset = null, backExtra = 0, cfMonth = NOW_KEY;
   var retAsset = 'all', retN = 12, rangeN = 12, projH = 12, projC = true, filter = 'all', sort = { k: 'V', dir: -1 };
   var armed = null, armTimer = null;
   var ov = null, geo = null;
@@ -593,6 +614,7 @@ try {
   function renderChrome(C) {
     $('nOv').setAttribute('aria-current', page === 'overview' ? 'page' : 'false');
     $('nEn').setAttribute('aria-current', page === 'entry' ? 'page' : 'false');
+    $('nCf').setAttribute('aria-current', page === 'cashflow' ? 'page' : 'false');
     $('nDe').setAttribute('aria-current', page === 'debt' ? 'page' : 'false');
     $('sub').textContent = C.lastDataKey ? 'ข้อมูลถึงเดือน ' + mLong(C.lastDataKey) + ' · มูลค่าเป็นบาท' : 'ยังไม่มีข้อมูล · มูลค่าเป็นบาท';
     var b = $('banner');
@@ -1259,18 +1281,77 @@ try {
   }
   function onDLeave() { var tip = $('dTip'); if (tip) tip.hidden = true; var c = $('dCross'); if (c) c.setAttribute('hidden', ''); }
 
+  /* ---------- รายรับรายจ่ายประจำเดือน ---------- */
+  function cfMonths() {
+    var out = [], endI = kIdx(NOW_KEY), keys = Object.keys(S.cashflow || {});
+    keys.forEach(function (k) { if (/^\d{4}-\d{2}$/.test(k)) endI = Math.max(endI, kIdx(k)); });
+    var startI = endI - 23;
+    keys.forEach(function (k) { if (/^\d{4}-\d{2}$/.test(k)) startI = Math.min(startI, kIdx(k)); });
+    for (var i = startI; i <= endI; i++) out.push(idxKey(i));
+    return out;
+  }
+  function cfEntries(k) {
+    if (!S.cashflow[k] || !Array.isArray(S.cashflow[k])) S.cashflow[k] = [];
+    return S.cashflow[k];
+  }
+  function cfTotals(k) {
+    var inc = 0, exp = 0;
+    (S.cashflow[k] || []).forEach(function (x) {
+      var a = typeof x.amount === 'number' ? x.amount : 0;
+      if (x.type === 'income') inc += a; else exp += a;
+    });
+    return { income: inc, expense: exp, net: inc - exp };
+  }
+  function cfPageHTML() {
+    var months = cfMonths();
+    if (months.indexOf(cfMonth) < 0) cfMonth = months[months.length - 1];
+    var t = cfTotals(cfMonth), rows = cfEntries(cfMonth);
+    var saveRate = t.income > 0 ? (t.net / t.income) * 100 : 0;
+    var si = months.indexOf(cfMonth);
+    var h = '<section class="panel"><div class="panel-head"><div><h2>รายรับรายจ่ายประจำเดือน</h2><p class="intro">บันทึกรายรับและรายจ่ายแยกเป็นรายการ ระบบรวมยอดให้ตามเดือน และเก็บข้อมูลร่วมกับพอร์ตเดิม</p></div></div>' +
+      '<div class="ctrl"><button class="btn" data-act="cfPrev" aria-label="เดือนก่อนหน้า"' + (si <= 0 ? ' disabled' : '') + '>‹</button>' +
+      '<select class="field" id="cfMonth" aria-label="เลือกเดือน">' + months.slice().reverse().map(function(k){ return '<option value="'+k+'"'+(k===cfMonth?' selected':'')+'>'+mLong(k)+'</option>'; }).join('') + '</select>' +
+      '<button class="btn" data-act="cfNext" aria-label="เดือนถัดไป"' + (si >= months.length-1 ? ' disabled' : '') + '>›</button>' +
+      '<button class="btn" data-act="cfAdd">+ เพิ่มรายการ</button></div>' +
+      '<div class="cf-grid">' +
+      '<div class="cf-card"><span class="lab">รายรับ</span><span class="val up num">'+bahtS(t.income)+'</span></div>' +
+      '<div class="cf-card"><span class="lab">รายจ่าย</span><span class="val dn num">'+bahtS(t.expense)+'</span></div>' +
+      '<div class="cf-card"><span class="lab">เงินคงเหลือสุทธิ</span><span class="val '+cls(t.net)+' num">'+sbaht(t.net)+'</span><span class="note">อัตราออม '+nf2.format(saveRate)+'%</span></div>' +
+      '</div></section>';
+
+    h += '<section class="panel"><div class="panel-head"><h2>รายการของเดือน'+mOnly(cfMonth)+'</h2><span class="note">'+rows.length+' รายการ</span></div>';
+    if (!rows.length) {
+      h += '<div class="empty"><p>ยังไม่มีรายการของเดือนนี้</p><button class="btn primary" data-act="cfAdd">เพิ่มรายรับหรือรายจ่าย</button></div>';
+    } else {
+      h += '<div class="tbl-scroll"><table class="cf-table"><thead><tr><th>ประเภท</th><th>หมวดหมู่</th><th class="num">จำนวนเงิน</th><th>รายละเอียด</th><th></th></tr></thead><tbody>';
+      rows.forEach(function(x, i) {
+        h += '<tr><td><span class="cf-type '+(x.type==='income'?'income':'expense')+'">'+(x.type==='income'?'รายรับ':'รายจ่าย')+'</span></td>' +
+          '<td>'+esc(x.category || 'ไม่ระบุ')+'</td><td class="num '+(x.type==='income'?'up':'dn')+'">'+bahtS(x.amount || 0)+'</td>' +
+          '<td>'+esc(x.note || '')+'</td><td><button class="btn sm danger" data-act="cfDel" data-i="'+i+'">ลบ</button></td></tr>';
+      });
+      h += '</tbody></table></div>';
+    }
+    h += '</section><section class="panel"><div class="panel-head"><h2>เพิ่มรายการ</h2><span class="note">กรอกจำนวนเงินเป็นบาท</span></div>' +
+      '<div class="cf-form"><select class="field" id="cfType"><option value="expense">รายจ่าย</option><option value="income">รายรับ</option></select>' +
+      '<input class="field wide" id="cfCategory" placeholder="หมวดหมู่ เช่น เงินเดือน / อาหาร / เดินทาง">' +
+      '<input class="field in" id="cfAmount" type="text" inputmode="decimal" placeholder="จำนวนเงิน">' +
+      '<input class="field wide" id="cfNote" placeholder="รายละเอียดเพิ่มเติม (ถ้ามี)">' +
+      '<button class="btn primary" data-act="cfSave">บันทึก</button></div><p class="blank-note" id="cfNoteMsg"></p></section>';
+    return h;
+  }
+
   /* ---------- วาดหน้า ---------- */
   function render() {
     var C = compute();
     renderChrome(C);
-    view.innerHTML = page === 'overview' ? overviewHTML(C) : page === 'debt' ? debtPageHTML(C) : entryHTML(C);
+    view.innerHTML = page === 'overview' ? overviewHTML(C) : page === 'debt' ? debtPageHTML(C) : page === 'cashflow' ? cfPageHTML() : entryHTML(C);
     if (page === 'overview' || page === 'debt') drawCharts();
     if (page === 'entry') updateCalcs();
     if (page === 'debt') updateDebtCalcs();
   }
   function route() {
     var h = (location.hash || '#overview').slice(1);
-    page = h === 'entry' ? 'entry' : h === 'debt' ? 'debt' : 'overview';
+    page = h === 'entry' ? 'entry' : h === 'debt' ? 'debt' : h === 'cashflow' ? 'cashflow' : 'overview';
     render();
   }
   window.addEventListener('hashchange', route);
@@ -1283,6 +1364,19 @@ try {
   function disarm() { armed = null; clearTimeout(armTimer); }
 
   view.addEventListener('input', function (e) {
+    var el = e.target;
+    if (page === 'cashflow' && el.classList.contains('cfedit')) {
+      var idx = +el.dataset.i, field = el.dataset.f, v = field === 'amount' ? parseNum(el.value) : el.value;
+      var arr = cfEntries(cfMonth), row = arr[idx];
+      if (!row) return;
+      if (field === 'amount') {
+        if (v === 'pending') return;
+        if (v === undefined || (v !== null && v < 0)) { el.setAttribute('aria-invalid','true'); return; }
+        el.removeAttribute('aria-invalid'); row.amount = v === null ? 0 : v;
+      } else row[field] = v;
+      persist();
+      return;
+    }
     var el = e.target;
     if (el.classList.contains('mi') && el.dataset.f === 'g') {
       var ga = S.assets.filter(function (x) { return x.id === el.dataset.a; })[0];
@@ -1315,6 +1409,7 @@ try {
     if (ov && mo > 0) { projH = mo; ov.pr = project(ov.C, projH, projC); drawLine(); }
   });
   view.addEventListener('change', function (e) {
+    if (e.target.id === 'cfMonth') { cfMonth = e.target.value; render(); return; }
     if (e.target.id === 'retAsset') { retAsset = e.target.value; render(); var rf = $('retAsset'); if (rf && rf.focus) rf.focus(); return; }
     if (e.target.id === 'projYears' || e.target.id === 'projNum') {
       var id = e.target.id;
@@ -1338,6 +1433,27 @@ try {
     if (act === 'retry') { flush(); return; }
     if (act === 'share') { copyShareLink(); return; }
     if (act === 'disarm') { disarm(); render(); return; }
+    if (act === 'cfPrev' || act === 'cfNext') {
+      var cfm = cfMonths(), cfi = cfm.indexOf(cfMonth);
+      cfi += act === 'cfPrev' ? -1 : 1;
+      if (cfi >= 0 && cfi < cfm.length) { cfMonth = cfm[cfi]; render(); }
+      return;
+    }
+    if (act === 'cfAdd') {
+      var ct = $('cfType'), cc = $('cfCategory'), ca = $('cfAmount'), cn = $('cfNote'), msg = $('cfNoteMsg');
+      if (!ct || !cc || !ca) return;
+      var av = parseNum(ca.value);
+      if (!cc.value.trim()) { if (msg) msg.textContent = 'กรุณาใส่หมวดหมู่'; return; }
+      if (av === undefined || av === 'pending' || av === null || av < 0) { if (msg) msg.textContent = 'กรุณาใส่จำนวนเงินที่ถูกต้อง'; return; }
+      cfEntries(cfMonth).push({ id:'c'+Date.now().toString(36)+Math.floor(Math.random()*1296).toString(36), type:ct.value, category:cc.value.trim(), amount:av, note:(cn.value||'').trim() });
+      persist(); render();
+      return;
+    }
+    if (act === 'cfDel') {
+      var ci = +b.dataset.i, ca2 = cfEntries(cfMonth);
+      if (ci >= 0 && ci < ca2.length) { ca2.splice(ci,1); if (!ca2.length) delete S.cashflow[cfMonth]; persist(); render(); }
+      return;
+    }
     if (act === 'range') { rangeN = +b.dataset.v; render(); }
     else if (act === 'filter') { filter = b.dataset.v; render(); }
     else if (act === 'proj') { projH = +b.dataset.v; render(); }
@@ -1385,7 +1501,7 @@ try {
     else if (act === 'clearAll' || act === 'clearSample') {
       if (armed !== act) { arm(act); render(); return; }
       disarm();
-      S = { v: 1, sample: false, assets: [], months: {}, debts: [], debtMonths: {} };
+      S = { v: 1, sample: false, assets: [], months: {}, debts: [], debtMonths: {}, cashflow: {} };
       selMonth = null; selAsset = null; backExtra = 0; sub = 'manage';
       persist();
       if (location.hash !== '#entry') location.hash = '#entry'; else render();
@@ -1459,7 +1575,7 @@ try {
   } else window.addEventListener('resize', drawCharts);
 
   setStatus('loading');
-  (function () { var h0 = (location.hash || '').slice(1); page = h0 === 'entry' ? 'entry' : h0 === 'debt' ? 'debt' : 'overview'; })();
+  (function () { var h0 = (location.hash || '').slice(1); page = h0 === 'entry' ? 'entry' : h0 === 'debt' ? 'debt' : h0 === 'cashflow' ? 'cashflow' : 'overview'; })();
   initAuth();
   init();
 })();
