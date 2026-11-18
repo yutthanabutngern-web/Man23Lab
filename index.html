@@ -240,6 +240,7 @@ details.how p { margin: 8px 0 0; }
       <nav class="tabs lg" aria-label="หน้า">
         <a href="#overview" id="nOv">ภาพรวม</a>
         <a href="#entry" id="nEn">กรอกข้อมูล</a>
+        <a href="#debt" id="nDe">หนี้สิน</a>
       </nav>
     </div>
   </header>
@@ -336,11 +337,30 @@ try {
         months[k][id] = e;
       }
     });
-    return { v: 1, sample: true, assets: assets, months: months };
+    // หนี้สินตัวอย่าง
+    var debts = [
+      { id: 'd0', name: 'สินเชื่อบ้าน', type: 'home', rate: 4.2, pay: 14500 },
+      { id: 'd1', name: 'สินเชื่อรถยนต์', type: 'car', rate: 3.9, pay: 9800 },
+      { id: 'd2', name: 'บัตรเครดิต', type: 'card', rate: 16, pay: 6000 }
+    ];
+    var bal = { d0: 2150000, d1: 420000, d2: 38000 }, debtMonths = {};
+    for (var di = startI; di <= endI; di++) {
+      var dk = idxKey(di); debtMonths[dk] = {};
+      debts.forEach(function (d) {
+        var spend = d.id === 'd2' ? Math.round(3000 + rnd() * 5000) : 0;
+        var pay = d.id === 'd2' ? Math.round(d.pay * (0.8 + rnd() * 0.6)) : d.pay;
+        bal[d.id] = Math.max(0, Math.round(bal[d.id] * (1 + d.rate / 1200) + spend - pay));
+        debtMonths[dk][d.id] = { b: bal[d.id], p: pay };
+      });
+    }
+    return { v: 1, sample: true, assets: assets, months: months, debts: debts, debtMonths: debtMonths };
   }
   function normalize(d) {
     var o = JSON.parse(JSON.stringify(d || {}));
-    var out = { v: 1, sample: !!o.sample, assets: Array.isArray(o.assets) ? o.assets : [], months: o.months && typeof o.months === 'object' ? o.months : {} };
+    var out = { v: 1, sample: !!o.sample, assets: Array.isArray(o.assets) ? o.assets : [], months: o.months && typeof o.months === 'object' ? o.months : {},
+      debts: Array.isArray(o.debts) ? o.debts : (o.debts && typeof o.debts === 'object' ? Object.keys(o.debts).map(function (k) { return o.debts[k]; }) : []),
+      debtMonths: o.debtMonths && typeof o.debtMonths === 'object' ? o.debtMonths : {} };
+    [out.months, out.debtMonths].forEach(function (mm) { Object.keys(mm).forEach(function (k) { if (!/^\d{4}-\d{2}$/.test(k)) delete mm[k]; }); });
     var run = {};
     Object.keys(out.months).sort().forEach(function (k) {
       out.assets.forEach(function (a) {
@@ -573,6 +593,7 @@ try {
   function renderChrome(C) {
     $('nOv').setAttribute('aria-current', page === 'overview' ? 'page' : 'false');
     $('nEn').setAttribute('aria-current', page === 'entry' ? 'page' : 'false');
+    $('nDe').setAttribute('aria-current', page === 'debt' ? 'page' : 'false');
     $('sub').textContent = C.lastDataKey ? 'ข้อมูลถึงเดือน ' + mLong(C.lastDataKey) + ' · มูลค่าเป็นบาท' : 'ยังไม่มีข้อมูล · มูลค่าเป็นบาท';
     var b = $('banner');
     if (S.sample) {
@@ -585,6 +606,11 @@ try {
 
   /* ---------- คาดการณ์ ---------- */
   var HLBL = { 12: '1 ปี', 24: '2 ปี', 60: '5 ปี', 156: '13 ปี' };
+  function fmtSpan(mo) {
+    if (mo < 12) return mo + ' เดือน';
+    var y = Math.floor(mo / 12), r = mo % 12;
+    return mo + ' เดือน (' + y + ' ปี' + (r ? ' ' + r + ' เดือน' : '') + ')';
+  }
   function project(C, H, withC) {
     var out = { pts: [], final: {}, totalP: 0, avgTot: 0 };
     if (!C.lastDataKey) return out;
@@ -632,7 +658,7 @@ try {
     });
     var pr = project(C, projH, projC);
     rows.forEach(function (r) { r.P = pr.final[r.id] || 0; });
-    var hLbl = (projH / 12) + ' ปี';
+    var hLbl = fmtSpan(projH);
     ov = { C: C, pts: pts, lastKey: lastKey, rows: rows, byClass: byClass, total: val, pr: pr, hLbl: hLbl };
     var order = Object.keys(byClass).filter(function (k) { return byClass[k] > 0; }).sort(function (a, b) { return byClass[b] - byClass[a]; });
     ov.order = order;
@@ -652,7 +678,7 @@ try {
       : 'ยังไม่ได้กรอก % เติบโตของสินทรัพย์ เส้นคาดการณ์จึงเท่ากับไม่มีการเติบโต <a href="#entry" data-act="goManage">ไปกรอกที่จัดการสินทรัพย์</a>') + '</p>' : '';
     h += '<div class="row"><section class="panel"><div class="panel-head"><h2>มูลค่าพอร์ต เงินลงทุน และมูลค่าคาดการณ์</h2><div class="tabs" role="group" aria-label="ช่วงเวลาย้อนหลัง">' +
       [[6, '6 เดือน'], [12, '12 เดือน'], [0, 'ทั้งหมด']].map(function (r) { return '<button data-act="range" data-v="' + r[0] + '" aria-pressed="' + (rangeN === r[0]) + '">' + r[1] + '</button>'; }).join('') +
-      '</div></div><div class="ctrl"><label class="note" for="projYears">คาดการณ์ล่วงหน้า</label><span class="projctl"><input type="range" id="projYears" min="0" max="50" step="1" value="' + (projH / 12) + '" aria-label="จำนวนปีที่คาดการณ์ล่วงหน้า"><input type="number" class="field" id="projNum" min="0" max="50" step="1" inputmode="numeric" value="' + (projH / 12) + '" aria-label="จำนวนปีที่คาดการณ์ (0 ถึง 50)"><span class="note">ปี</span></span>' +
+      '</div></div><div class="ctrl"><label class="note" for="projYears">คาดการณ์ล่วงหน้า</label><span class="projctl"><input type="range" id="projYears" min="0" max="600" step="1" value="' + projH + '" aria-label="จำนวนเดือนที่คาดการณ์ล่วงหน้า"><input type="number" class="field" id="projNum" min="0" max="600" step="1" inputmode="numeric" value="' + projH + '" aria-label="จำนวนเดือนที่คาดการณ์ (0 ถึง 600)"><span class="note">เดือน</span></span><span class="note" id="projSpan">' + (projH >= 12 ? '≈ ' + Math.floor(projH / 12) + ' ปี' + (projH % 12 ? ' ' + (projH % 12) + ' เดือน' : '') : '') + '</span>' +
       (projH ? '<div class="tabs" role="group" aria-label="เงินที่ใส่เพิ่มในอนาคต"><button data-act="projc" data-v="1" aria-pressed="' + projC + '">ใส่เพิ่มต่อ</button><button data-act="projc" data-v="0" aria-pressed="' + (!projC) + '">หยุดใส่เพิ่ม</button></div>' : '') + '</div>' +
       '<div class="legend"><span><i></i>มูลค่าตลาด</span><span><i class="dash"></i>เงินลงทุนสะสม</span>' + (projH ? '<span><i class="dot"></i>มูลค่าคาดการณ์</span>' : '') + '</div>' +
       '<div class="chart-wrap" id="chartWrap"><div class="tip" id="tip" hidden></div></div>' + projNote + '</section>';
@@ -669,7 +695,7 @@ try {
       order.map(function (k) { return '<li><span class="dot" style="background:' + CLASSES[k].color + '"></span><span>' + CLASSES[k].name + '</span><span class="pct">' + nf2.format((byClass[k] / val) * 100) + '%</span><span class="amt">' + bahtS(byClass[k]) + '</span></li>'; }).join('') +
       '</ul></section></div>';
 
-    var COLS = [['t', 'สินทรัพย์'], ['C', 'เงินลงทุนสะสม'], ['V', 'มูลค่า'], ['plp', 'กำไร/ขาดทุน'], ['lr', 'เดือน' + mOnly(lastKey)], ['P', 'คาดการณ์ ' + hLbl], ['w', 'สัดส่วน']];
+    var COLS = [['t', 'สินทรัพย์'], ['C', 'เงินลงทุนสะสม'], ['V', 'มูลค่า'], ['plp', 'กำไร/ขาดทุน'], ['lr', 'เดือน' + mOnly(lastKey)], ['P', 'คาดการณ์ ' + projH + ' ด.'], ['w', 'สัดส่วน']];
     var shown = rows.filter(function (r) { return filter === 'all' || r.cls === filter; });
     shown.sort(function (a, b) {
       var x = a[sort.k], y = b[sort.k];
@@ -847,7 +873,7 @@ try {
     });
     el.innerHTML = s + '</svg>';
   }
-  function drawCharts() { if (page === 'overview') { drawLine(); drawBars(); } }
+  function drawCharts() { if (page === 'overview') { drawLine(); drawBars(); } else if (page === 'debt') drawDebtChart(); }
 
   /* ---------- กรอกข้อมูล ---------- */
   function ro() { return !(loaded && canWrite); }
@@ -931,10 +957,10 @@ try {
     h += '<div class="sec-title">เพิ่มสินทรัพย์ใหม่</div><div class="mng add"><div class="f"><label class="cl" for="nTick">ชื่อย่อ</label><input class="field" id="nTick" placeholder="ชื่อย่อ เช่น PTT" aria-label="ชื่อย่อสินทรัพย์ใหม่"' + dis + '></div>' +
       '<div class="f nm"><label class="cl" for="nName">ชื่อสินทรัพย์</label><input class="field" id="nName" placeholder="ชื่อสินทรัพย์" aria-label="ชื่อสินทรัพย์ใหม่"' + dis + '></div>' +
       '<div class="f"><label class="cl" for="nCls">ประเภท</label><select class="field" id="nCls" aria-label="ประเภทสินทรัพย์ใหม่"' + dis + '>' + clsOpts('th') + '</select></div>' +
-      '<div class="f"><label class="cl" for="nG">คาดการณ์เติบโต (%/ปี)</label><input class="field in" id="nG" inputmode="decimal" autocomplete="off" placeholder="เช่น 8" aria-label="คาดการณ์เติบโตต่อปี (%) ของสินทรัพย์ใหม่"' + dis + '></div>' +
+      '<div class="f"><label class="cl" for="nG">คาดการณ์เติบโต (%/ปี)</label><input class="field dnum" id="nG" inputmode="decimal" autocomplete="off" placeholder="เช่น 8" aria-label="คาดการณ์เติบโตต่อปี (%) ของสินทรัพย์ใหม่"' + dis + '></div>' +
       '<button class="btn primary" data-act="addAsset"' + dis + '>เพิ่ม</button></div><p class="blank-note" id="addNote"></p>';
     var k2 = 'clearAll';
-    h += '<div class="sec-title">ล้างข้อมูล</div><p class="intro">ลบสินทรัพย์และข้อมูลรายเดือนทั้งหมดเพื่อเริ่มใหม่ ย้อนกลับไม่ได้</p>' +
+    h += '<div class="sec-title">ล้างข้อมูล</div><p class="intro">ลบสินทรัพย์ หนี้สิน และข้อมูลรายเดือนทั้งหมดเพื่อเริ่มใหม่ ย้อนกลับไม่ได้</p>' +
       (armed === k2 ? '<button class="btn danger armed" data-act="clearAll">ยืนยัน ลบข้อมูลทั้งหมด</button> <button class="btn" data-act="disarm">ยกเลิก</button>'
         : '<button class="btn danger" data-act="clearAll"' + dis + '>ล้างข้อมูลทั้งหมด</button>');
     return h;
@@ -975,16 +1001,276 @@ try {
     if (bn) { var TT = C.T[selMonth] || ZT; bn.textContent = TT.blanks ? 'ยังไม่ได้กรอกมูลค่าปัจจุบัน ' + TT.blanks + ' รายการ ระบบนับว่ามูลค่าเท่าเดิมไปก่อน' : ''; }
   }
 
+
+  /* ================= หนี้สิน ================= */
+  var DTYPES = {
+    home:     { name: 'บ้าน/คอนโด',      color: 'var(--c-th)' },
+    car:      { name: 'รถยนต์',           color: 'var(--c-us)' },
+    card:     { name: 'บัตรเครดิต',       color: 'var(--dn)' },
+    personal: { name: 'สินเชื่อส่วนบุคคล', color: 'var(--c-btc)' },
+    edu:      { name: 'กู้เพื่อการศึกษา',  color: 'var(--c-fund)' },
+    other:    { name: 'อื่น ๆ',           color: 'var(--c-cash)' }
+  };
+  var debtSub = 'sum', dSelMonth = null, dBack = 0, dRange = 12, dview = null, dgeo = null;
+  function dtype(d) { return DTYPES[d.type] || DTYPES.other; }
+  function findDebt(id) { return S.debts.filter(function (x) { return x.id === id; })[0]; }
+
+  function debtCompute() {
+    var keys = Object.keys(S.debtMonths).sort();
+    var nowI = kIdx(NOW_KEY), lastI = keys.length ? kIdx(keys[keys.length - 1]) : nowI;
+    var endI = Math.max(nowI, lastI), startI = keys.length ? kIdx(keys[0]) : endI, tl = [], i;
+    for (i = startI; i <= endI; i++) tl.push(idxKey(i));
+    var D = {}, T = {};
+    S.debts.forEach(function (d) { D[d.id] = {}; });
+    tl.forEach(function (k, ti) {
+      var mo = S.debtMonths[k] || {}, t = { B: 0, P: 0, I: 0, pB: 0, blanks: 0 };
+      S.debts.forEach(function (d) {
+        var e = mo[d.id] || {}, prev = ti ? D[d.id][tl[ti - 1]] : null;
+        var pB = prev ? prev.B : 0, hasB = typeof e.b === 'number';
+        var B = hasB ? e.b : pB, P = typeof e.p === 'number' ? e.p : 0;
+        var I = pB * (typeof d.rate === 'number' ? d.rate : 0) / 1200;
+        D[d.id][k] = { B: B, P: P, I: I, pB: pB, chg: B - pB, blank: !hasB && pB > 0 };
+        t.B += B; t.P += P; t.I += I; t.pB += pB; if (!hasB && pB > 0) t.blanks++;
+      });
+      T[k] = t;
+    });
+    return { tl: tl, D: D, T: T, firstKey: keys[0] || null, lastKey: keys.length ? keys[keys.length - 1] : null, endKey: idxKey(endI) };
+  }
+  function dCell(DC, id, k) { return (DC.D[id] && DC.D[id][k]) || { B: 0, P: 0, I: 0, pB: 0, chg: 0, blank: false }; }
+  function setDCell(id, m, f, v) {
+    if (!S.debtMonths[m]) S.debtMonths[m] = {};
+    var e = S.debtMonths[m][id] || (S.debtMonths[m][id] = {});
+    if (v === null) delete e[f]; else e[f] = v;
+    if (!Object.keys(e).length) delete S.debtMonths[m][id];
+    if (!Object.keys(S.debtMonths[m]).length) delete S.debtMonths[m];
+  }
+  function payoffMonths(B, rate, m) {
+    if (B <= 0) return 0;
+    if (!(m > 0)) return null;
+    var i = (rate || 0) / 1200;
+    if (i === 0) return Math.ceil(B / m);
+    var x = 1 - (B * i) / m;
+    if (x <= 0) return Infinity;
+    return Math.ceil(-Math.log(x) / Math.log(1 + i));
+  }
+  function dMonths(DC) {
+    var endI = kIdx(DC.endKey), startI = Math.min(DC.firstKey ? kIdx(DC.firstKey) : endI, endI - 23) - dBack, out = [], i;
+    for (i = startI; i <= endI; i++) out.push(idxKey(i));
+    return out;
+  }
+  function chgPill(delta) { // หนี้ลดลงคือดี
+    var c = delta < 0 ? 'up' : delta > 0 ? 'dn' : 'flat';
+    return '<span class="pill ' + c + '">' + (delta < 0 ? '▼ ลดลง ' : delta > 0 ? '▲ เพิ่มขึ้น ' : '– ไม่เปลี่ยน ') + (delta ? bahtS(Math.abs(delta)) : '') + '</span>';
+  }
+
+  function emptyDebt() {
+    return '<section class="panel empty"><h2>ยังไม่มีข้อมูลหนี้สิน</h2><p>เพิ่มรายการหนี้ เช่น สินเชื่อบ้าน รถยนต์ หรือบัตรเครดิต แล้วกรอกยอดคงเหลือและยอดที่ชำระของแต่ละเดือน</p><button class="btn primary" data-act="dsub" data-v="manage">เพิ่มรายการหนี้</button></section>';
+  }
+  function debtSumHTML(DC, C) {
+    if (!S.debts.length) { dview = null; return emptyDebt(); }
+    var lk = DC.lastKey;
+    if (!lk) { dview = null; return '<section class="panel empty"><h2>ยังไม่ได้กรอกยอดหนี้</h2><p>ไปกรอกยอดหนี้คงเหลือสิ้นเดือนของแต่ละรายการ ภาพรวมจะคำนวณให้อัตโนมัติ</p><button class="btn primary" data-act="dsub" data-v="month">ไปกรอกยอดรายเดือน</button></section>'; }
+    var T = DC.T[lk], li = DC.tl.indexOf(lk), prevB = li > 0 ? DC.T[DC.tl[li - 1]].B : 0;
+    var pts = points(C), pv = pts.length ? pts[pts.length - 1].v : null;
+    var net = pv === null ? null : pv - T.B;
+    var nextI = 0, payTot = 0;
+    S.debts.forEach(function (d) { var c = dCell(DC, d.id, lk); nextI += c.B * (typeof d.rate === 'number' ? d.rate : 0) / 1200; payTot += typeof d.pay === 'number' ? d.pay : 0; });
+    var h = '<section class="kpis" aria-label="สรุปหนี้สิน">' +
+      kpi('หนี้คงเหลือรวม', bahtS(T.B), li > 0 ? chgPill(T.B - prevB) : 'ณ ' + mLong(lk)) +
+      kpi('ชำระเดือน' + mOnly(lk), bahtS(T.P), payTot ? 'ค่างวดที่ตั้งไว้รวม ' + bahtS(payTot) + ' ต่อเดือน' : 'ยังไม่ได้ตั้งค่างวดต่อเดือน') +
+      kpi('ดอกเบี้ยโดยประมาณต่อเดือน', bahtS(nextI), 'คิดจากยอดคงเหลือล่าสุดและอัตราดอกเบี้ย') +
+      kpi('มูลค่าสุทธิ (พอร์ต − หนี้)', net === null ? '–' : sbaht(net), net === null ? 'ยังไม่มีข้อมูลพอร์ต' : 'พอร์ต ' + bahtS(pv) + ' · หนี้ ' + bahtS(T.B), net === null ? '' : cls(net)) +
+      '</section>';
+
+    var series = [], q;
+    for (q = 0; q <= li; q++) {
+      var k = DC.tl[q], ct = C.T[k];
+      series.push({ k: k, B: DC.T[k].B, V: ct && ct.C !== 0 ? ct.V : null });
+    }
+    if (dRange) series = series.slice(-dRange);
+    dview = { series: series, DC: DC };
+    h += '<section class="panel"><div class="panel-head"><h2>หนี้คงเหลือเทียบกับมูลค่าพอร์ต</h2><div class="tabs" role="group" aria-label="ช่วงเวลา">' +
+      [[12, '12 เดือน'], [24, '24 เดือน'], [0, 'ทั้งหมด']].map(function (r) { return '<button data-act="drange" data-v="' + r[0] + '" aria-pressed="' + (dRange === r[0]) + '">' + r[1] + '</button>'; }).join('') +
+      '</div></div><div class="legend"><span><i style="border-top-color:var(--dn)"></i>หนี้คงเหลือรวม</span><span><i></i>มูลค่าพอร์ต</span></div>' +
+      '<div class="chart-wrap" id="dChartWrap"><div class="tip" id="dTip" hidden></div></div></section>';
+
+    var rows = S.debts.map(function (d) {
+      var c = dCell(DC, d.id, lk), peak = 0, kk;
+      DC.tl.forEach(function (k2) { peak = Math.max(peak, dCell(DC, d.id, k2).B); });
+      var po = payoffMonths(c.B, d.rate, d.pay);
+      return { d: d, c: c, peak: peak, paid: peak > 0 ? Math.max(0, Math.min(100, ((peak - c.B) / peak) * 100)) : 0, po: po, w: T.B > 0 ? (c.B / T.B) * 100 : 0 };
+    }).sort(function (a, b) { return b.c.B - a.c.B; });
+    h += '<section class="panel"><div class="panel-head"><h2>รายการหนี้</h2><span class="note">ข้อมูล ณ ' + mLong(lk) + '</span></div><div class="tbl-scroll"><table><thead><tr>' +
+      ['หนี้', 'ดอกเบี้ย (%/ปี)', 'ยอดคงเหลือ', 'ชำระเดือนล่าสุด', 'ค่างวดต่อเดือน', 'คาดว่าหมดใน', 'จ่ายแล้ว', 'สัดส่วน'].map(function (t) { return '<th scope="col">' + t + '</th>'; }).join('') + '</tr></thead><tbody>' +
+      rows.map(function (r) {
+        var d = r.d, po = r.po, poTxt = po === null ? '<span class="flat">ยังไม่ตั้งค่างวด</span>' : po === Infinity ? '<span class="dn">ไม่หมด</span><span class="pl-sub flat">ค่างวดต่ำกว่าดอกเบี้ย</span>' : po === 0 ? '<span class="up">หมดแล้ว</span>' : fmtSpan(po).split(' (')[0] + '<span class="pl-sub flat">ราว ' + mShort(idxKey(kIdx(lk) + po)) + '</span>';
+        return '<tr><td><div class="asset"><span class="dot" style="background:' + dtype(d).color + '"></span><div><div class="t">' + esc(d.name) + '</div><div class="n">' + dtype(d).name + '</div></div></div></td>' +
+          '<td class="num">' + (typeof d.rate === 'number' ? nf2.format(d.rate) : '–') + '</td>' +
+          '<td class="num">' + bahtS(r.c.B) + '</td><td class="num">' + bahtS(r.c.P) + '</td>' +
+          '<td class="num">' + (typeof d.pay === 'number' ? bahtS(d.pay) : '–') + '</td><td class="num">' + poTxt + '</td>' +
+          '<td><div class="w"><span class="num">' + nf0.format(r.paid) + '%</span><span class="bar"><b style="width:' + r.paid.toFixed(1) + '%;background:var(--up)"></b></span></div></td>' +
+          '<td><div class="w"><span class="num">' + nf2.format(r.w) + '%</span><span class="bar"><b style="width:' + Math.min(100, r.w).toFixed(1) + '%;background:var(--dn)"></b></span></div></td></tr>';
+      }).join('') + '</tbody></table></div><p class="blank-note">"จ่ายแล้ว" เทียบกับยอดสูงสุดที่เคยบันทึกไว้ ส่วน "คาดว่าหมดใน" คำนวณจากยอดคงเหลือล่าสุด ดอกเบี้ย และค่างวดต่อเดือนที่ตั้งไว้</p></section>';
+    return h;
+  }
+
+  function dinp(id, d, m, f, raw, ph, label, ctx) {
+    return '<div class="f"><label class="cl" for="' + id + '">' + label + '</label><input class="field din" id="' + id + '" inputmode="decimal" autocomplete="off" data-d="' + esc(d) + '" data-m="' + m + '" data-f="' + f + '" value="' + (raw === undefined || raw === null ? '' : raw) + '" placeholder="' + ph + '" aria-label="' + esc(label + ' ' + ctx) + '"' + (ro() ? ' disabled' : '') + '></div>';
+  }
+  function dCalcCell(label, kind, d, m) {
+    return '<div class="f calc"><span class="cl">' + label + '</span><span class="num" data-dcalc="' + kind + '" data-d="' + esc(d || '') + '" data-m="' + m + '"></span></div>';
+  }
+  function debtMonthBody(DC) {
+    if (!S.debts.length) return '<div class="empty"><p>ยังไม่มีรายการหนี้ เพิ่มรายการแรกก่อน แล้วค่อยกรอกยอดรายเดือน</p><button class="btn primary" data-act="dsub" data-v="manage">เพิ่มรายการหนี้</button></div>';
+    var months = dMonths(DC);
+    if (!dSelMonth || months.indexOf(dSelMonth) < 0) dSelMonth = DC.endKey;
+    var si = months.indexOf(dSelMonth), m = dSelMonth;
+    var h = '<details class="how"><summary>วิธีกรอก</summary><p>ใส่ยอดหนี้คงเหลือ ณ สิ้นเดือน และยอดที่ชำระจริงในเดือนนั้น ถ้าเว้นช่องยอดคงเหลือไว้ ระบบถือว่ายอดเท่ากับเดือนก่อน ดอกเบี้ยโดยประมาณ = ยอดคงเหลือเดือนก่อน × อัตราดอกเบี้ยต่อปี ÷ 12 เป็นเพียงค่าประมาณ อาจต่างจากใบแจ้งหนี้จริง</p></details>' +
+      '<div class="ctrl"><button class="btn" data-act="dprev" aria-label="เดือนก่อนหน้า"' + (si <= 0 ? ' disabled' : '') + '>‹</button>' +
+      '<select class="field" id="dMonthSel" aria-label="เลือกเดือน">' + months.slice().reverse().map(function (k) { return '<option value="' + k + '"' + (k === m ? ' selected' : '') + '>' + mLong(k) + '</option>'; }).join('') + '</select>' +
+      '<button class="btn" data-act="dnext" aria-label="เดือนถัดไป"' + (si >= months.length - 1 ? ' disabled' : '') + '>›</button>' +
+      '<button class="btn" data-act="dback">เพิ่มเดือนย้อนหลัง</button>' +
+      '<button class="btn" data-act="dcopy"' + (ro() ? ' disabled' : '') + '>คัดลอกยอดชำระจากเดือนก่อน</button><span class="note" id="dCopyNote"></span></div>';
+    h += '<div class="erows"><div class="ehead"><span>รายการหนี้</span><span>ยอดหนี้คงเหลือ (฿)</span><span>ชำระเดือนนี้ (฿)</span><span>เปลี่ยนจากเดือนก่อน</span><span>ดอกเบี้ยโดยประมาณ</span></div>';
+    var mo = S.debtMonths[m] || {};
+    S.debts.forEach(function (d) {
+      var e = mo[d.id] || {};
+      h += '<div class="erow"><div class="name"><div class="asset"><span class="dot" style="background:' + dtype(d).color + ';width:8px;height:28px;border-radius:3px;flex:none"></span><div><div class="t">' + esc(d.name) + '</div><div class="n">' + dtype(d).name + (typeof d.rate === 'number' ? ' · ' + nf2.format(d.rate) + '%/ปี' : '') + '</div></div></div></div>' +
+        dinp('db_' + d.id, d.id, m, 'b', e.b, '0', 'ยอดหนี้คงเหลือ (฿)', d.name + ' ' + mLong(m)) +
+        dinp('dp_' + d.id, d.id, m, 'p', e.p, '0', 'ชำระเดือนนี้ (฿)', d.name + ' ' + mLong(m)) +
+        dCalcCell('เปลี่ยนจากเดือนก่อน', 'chg', d.id, m) + dCalcCell('ดอกเบี้ยโดยประมาณ', 'int', d.id, m) + '</div>';
+    });
+    h += '<div class="erow tot"><div class="name">รวมทุกรายการ</div>' + dCalcCell('ยอดคงเหลือรวม', 'tb', '', m) + dCalcCell('ชำระรวม', 'tp', '', m) + dCalcCell('เปลี่ยนจากเดือนก่อน', 'tchg', '', m) + dCalcCell('ดอกเบี้ยโดยประมาณ', 'ti', '', m) + '</div></div>';
+    h += '<p class="blank-note" id="dBlankNote"></p>';
+    return h;
+  }
+  function debtManageBody() {
+    var typeOpts = function (sel) { return Object.keys(DTYPES).map(function (k) { return '<option value="' + k + '"' + (k === sel ? ' selected' : '') + '>' + DTYPES[k].name + '</option>'; }).join(''); };
+    var dis = ro() ? ' disabled' : '';
+    var h = '<p class="intro">เพิ่ม แก้ไข หรือลบรายการหนี้ ใส่อัตราดอกเบี้ยต่อปีและค่างวดต่อเดือนเพื่อให้ระบบประมาณดอกเบี้ยและเวลาที่หนี้จะหมด (เว้นว่างได้) การลบรายการจะลบยอดรายเดือนของรายการนั้นไปด้วย</p>';
+    if (S.debts.length) h += '<div class="mng mngd mh"><span>ชื่อหนี้</span><span>ประเภท</span><span>ดอกเบี้ย (%/ปี)</span><span>ค่างวดต่อเดือน (฿)</span><span></span></div>';
+    S.debts.forEach(function (d) {
+      var key = 'ddel:' + d.id;
+      h += '<div class="mng mngd"><div class="f nm"><label class="cl" for="dn_' + esc(d.id) + '">ชื่อหนี้</label><input class="field dmi" id="dn_' + esc(d.id) + '" data-d="' + esc(d.id) + '" data-f="name" value="' + esc(d.name) + '" placeholder="ชื่อหนี้" aria-label="ชื่อหนี้"' + dis + '></div>' +
+        '<div class="f"><label class="cl" for="dt_' + esc(d.id) + '">ประเภท</label><select class="field dtype" id="dt_' + esc(d.id) + '" data-d="' + esc(d.id) + '" aria-label="ประเภทหนี้"' + dis + '>' + typeOpts(d.type) + '</select></div>' +
+        '<div class="f"><label class="cl" for="dr_' + esc(d.id) + '">ดอกเบี้ย (%/ปี)</label><input class="field din" id="dr_' + esc(d.id) + '" inputmode="decimal" autocomplete="off" data-d="' + esc(d.id) + '" data-f="rate" value="' + (typeof d.rate === 'number' ? d.rate : '') + '" placeholder="เช่น 4.2" aria-label="ดอกเบี้ยต่อปี (%) ของ ' + esc(d.name) + '"' + dis + '></div>' +
+        '<div class="f"><label class="cl" for="dy_' + esc(d.id) + '">ค่างวดต่อเดือน (฿)</label><input class="field din" id="dy_' + esc(d.id) + '" inputmode="decimal" autocomplete="off" data-d="' + esc(d.id) + '" data-f="pay" value="' + (typeof d.pay === 'number' ? d.pay : '') + '" placeholder="เช่น 12000" aria-label="ค่างวดต่อเดือน (฿) ของ ' + esc(d.name) + '"' + dis + '></div>' +
+        '<button class="btn danger sm' + (armed === key ? ' armed' : '') + '" data-act="ddel" data-d="' + esc(d.id) + '"' + dis + '>' + (armed === key ? 'ยืนยันลบ' : 'ลบ') + '</button></div>';
+    });
+    h += '<div class="sec-title">เพิ่มรายการหนี้ใหม่</div><div class="mng mngd add"><div class="f nm"><label class="cl" for="ndName">ชื่อหนี้</label><input class="field" id="ndName" placeholder="เช่น สินเชื่อบ้าน" aria-label="ชื่อหนี้ใหม่"' + dis + '></div>' +
+      '<div class="f"><label class="cl" for="ndType">ประเภท</label><select class="field" id="ndType" aria-label="ประเภทหนี้ใหม่"' + dis + '>' + typeOpts('home') + '</select></div>' +
+      '<div class="f"><label class="cl" for="ndRate">ดอกเบี้ย (%/ปี)</label><input class="field dnum" id="ndRate" inputmode="decimal" autocomplete="off" placeholder="เช่น 4.2" aria-label="ดอกเบี้ยต่อปีของหนี้ใหม่"' + dis + '></div>' +
+      '<div class="f"><label class="cl" for="ndPay">ค่างวดต่อเดือน (฿)</label><input class="field dnum" id="ndPay" inputmode="decimal" autocomplete="off" placeholder="เช่น 12000" aria-label="ค่างวดต่อเดือนของหนี้ใหม่"' + dis + '></div>' +
+      '<button class="btn primary" data-act="dadd"' + dis + '>เพิ่ม</button></div><p class="blank-note" id="ndNote"></p>';
+    return h;
+  }
+  function debtPageHTML(C) {
+    var DC = debtCompute();
+    var tabs = [['sum', 'ภาพรวมหนี้'], ['month', 'กรอกรายเดือน'], ['manage', 'จัดการรายการหนี้']];
+    var body = debtSub === 'sum' ? debtSumHTML(DC, C) : '<section class="panel">' + (debtSub === 'month' ? debtMonthBody(DC) : debtManageBody()) + '</section>';
+    var head = '<section class="panel"><div class="panel-head" style="margin-bottom:0"><h2>หนี้สิน</h2><div class="tabs" role="group" aria-label="ส่วนของหน้าหนี้สิน">' +
+      tabs.map(function (t) { return '<button data-act="dsub" data-v="' + t[0] + '" aria-pressed="' + (debtSub === t[0]) + '">' + t[1] + '</button>'; }).join('') + '</div></div></section>';
+    return head + '<div id="dBody" style="display:flex;flex-direction:column;gap:16px;min-width:0">' + body + '</div>';
+  }
+  function renderDebtBody() {
+    var el = $('dBody'); if (!el) return;
+    var C = compute(), DC = debtCompute();
+    el.innerHTML = debtSub === 'sum' ? debtSumHTML(DC, C) : '<section class="panel">' + (debtSub === 'month' ? debtMonthBody(DC) : debtManageBody()) + '</section>';
+    updateDebtCalcs(); if (debtSub === 'sum') drawDebtChart();
+  }
+  function updateDebtCalcs() {
+    var els = document.querySelectorAll('[data-dcalc]');
+    if (!els.length) return;
+    var DC = debtCompute();
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i], t = el.dataset.dcalc, id = el.dataset.d, m = el.dataset.m, txt = '', c = '';
+      if (t === 'chg' || t === 'int') {
+        var cell = dCell(DC, id, m);
+        if (t === 'int') txt = bahtS(cell.I);
+        else if (cell.pB === 0) txt = '–';
+        else { txt = (cell.chg < 0 ? '▼ ' : cell.chg > 0 ? '▲ ' : '') + sbaht(cell.chg); c = cell.chg < 0 ? 'up' : cell.chg > 0 ? 'dn' : 'flat'; }
+      } else {
+        var T = DC.T[m] || { B: 0, P: 0, I: 0, pB: 0, blanks: 0 };
+        if (t === 'tb') txt = bahtS(T.B);
+        else if (t === 'tp') txt = bahtS(T.P);
+        else if (t === 'ti') txt = bahtS(T.I);
+        else if (t === 'tchg') { if (T.pB === 0) txt = '–'; else { var dl = T.B - T.pB; txt = sbaht(dl); c = dl < 0 ? 'up' : dl > 0 ? 'dn' : 'flat'; } }
+      }
+      el.textContent = txt; el.className = 'num ' + c;
+    }
+    var ins = document.querySelectorAll('input.din[data-m][data-f="b"]');
+    for (var j = 0; j < ins.length; j++) if (!ins[j].value) ins[j].placeholder = nf0.format(Math.round(dCell(DC, ins[j].dataset.d, ins[j].dataset.m).pB));
+    var bn = $('dBlankNote');
+    if (bn) { var TT = DC.T[dSelMonth]; bn.textContent = TT && TT.blanks ? 'ยังไม่ได้กรอกยอดคงเหลือ ' + TT.blanks + ' รายการ ระบบนับว่ายอดเท่าเดือนก่อน' : ''; }
+  }
+
+  function drawDebtChart() {
+    var wrap = $('dChartWrap'); if (!wrap || !dview) return;
+    var tip = $('dTip'), old = wrap.querySelector('svg'); if (old) old.remove();
+    var oldMsg = wrap.querySelector('.empty-chart'); if (oldMsg) oldMsg.remove();
+    var data = dview.series, n = data.length;
+    if (n < 2) { tip.hidden = true; wrap.insertAdjacentHTML('afterbegin', '<div class="empty-chart">ต้องมีข้อมูลหนี้อย่างน้อย 2 เดือนจึงจะแสดงกราฟ</div>'); return; }
+    var W = Math.max(280, wrap.clientWidth), H = W < 520 ? 230 : 290;
+    var m = { l: 62, r: 12, t: 12, b: 26 }, hi = 0;
+    data.forEach(function (p) { hi = Math.max(hi, p.B, p.V === null ? 0 : p.V); });
+    var step = niceStep(Math.max(hi, 1), 4), y1 = Math.ceil(hi / step) * step || step;
+    var maxLen = 0, v; for (v = 0; v <= y1 + step * 0.01; v += step) maxLen = Math.max(maxLen, axisLab(v).length);
+    m.l = Math.max(62, Math.round(maxLen * 6.4 + 16));
+    var iw = W - m.l - m.r, ih = H - m.t - m.b;
+    function X(i) { return m.l + (i / (n - 1)) * iw; }
+    function Y(val) { return m.t + ih - (val / y1) * ih; }
+    function path(key) { var d = '', st = false; data.forEach(function (p, i) { if (p[key] === null) return; d += (st ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(p[key]).toFixed(1); st = true; }); return d; }
+    var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="กราฟหนี้คงเหลือรวมเทียบกับมูลค่าพอร์ตรายเดือน">';
+    for (v = 0; v <= y1 + step * 0.01; v += step) {
+      var yy = Y(v).toFixed(1);
+      s += '<line x1="' + m.l + '" x2="' + (W - m.r) + '" y1="' + yy + '" y2="' + yy + '" stroke="var(--line)" stroke-width="1"/><text class="ax" x="' + (m.l - 8) + '" y="' + (+yy + 4) + '" text-anchor="end">' + (v === 0 ? '0' : axisLab(v)) + '</text>';
+    }
+    var ticks = Math.min(n, W < 520 ? 4 : 6);
+    for (var k = 0; k < ticks; k++) {
+      var idx = ticks === 1 ? 0 : Math.round((k / (ticks - 1)) * (n - 1));
+      s += '<text class="ax" x="' + X(idx).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="' + (k === 0 ? 'start' : k === ticks - 1 ? 'end' : 'middle') + '">' + mShort(data[idx].k) + '</text>';
+    }
+    var lineB = path('B');
+    s += '<path d="' + lineB + 'L' + X(n - 1).toFixed(1) + ' ' + (m.t + ih) + 'L' + m.l + ' ' + (m.t + ih) + 'Z" fill="var(--dn)" opacity=".10"/>';
+    if (data.some(function (p) { return p.V !== null; })) s += '<path d="' + path('V') + '" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linejoin="round"/>';
+    s += '<path d="' + lineB + '" fill="none" stroke="var(--dn)" stroke-width="2.4" stroke-linejoin="round"/>';
+    s += '<circle cx="' + X(n - 1).toFixed(1) + '" cy="' + Y(data[n - 1].B).toFixed(1) + '" r="4.5" fill="var(--dn)" stroke="var(--surface)" stroke-width="2"/>';
+    s += '<g id="dCross" hidden><line id="dCl" y1="' + m.t + '" y2="' + (m.t + ih) + '" stroke="var(--ink-3)" stroke-width="1"/><circle id="dCd" r="4.5" fill="var(--dn)" stroke="var(--surface)" stroke-width="2"/></g>';
+    s += '<rect id="dHit" x="' + m.l + '" y="' + m.t + '" width="' + iw + '" height="' + ih + '" fill="transparent"/></svg>';
+    wrap.insertAdjacentHTML('afterbegin', s);
+    dgeo = { data: data, m: m, iw: iw, W: W, X: X, Y: Y };
+    var hit = $('dHit');
+    hit.addEventListener('pointermove', onDMove); hit.addEventListener('pointerdown', onDMove); hit.addEventListener('pointerleave', onDLeave);
+  }
+  function onDMove(e) {
+    var wrap = $('dChartWrap'), tip = $('dTip'), svg = wrap.querySelector('svg'), rect = svg.getBoundingClientRect();
+    var px = (e.clientX - rect.left) * (dgeo.W / rect.width);
+    var i = Math.max(0, Math.min(dgeo.data.length - 1, Math.round(((px - dgeo.m.l) / dgeo.iw) * (dgeo.data.length - 1))));
+    var p = dgeo.data[i], x = dgeo.X(i);
+    $('dCross').removeAttribute('hidden');
+    $('dCl').setAttribute('x1', x); $('dCl').setAttribute('x2', x);
+    $('dCd').setAttribute('cx', x); $('dCd').setAttribute('cy', dgeo.Y(p.B));
+    tip.innerHTML = '<div class="d">' + mLong(p.k) + '</div><div class="r"><span>หนี้คงเหลือ</span><b class="num dn">' + bahtS(p.B) + '</b></div>' +
+      (p.V === null ? '' : '<div class="r"><span>มูลค่าพอร์ต</span><span class="num">' + bahtS(p.V) + '</span></div><div class="r"><span>สุทธิ</span><span class="num ' + cls(p.V - p.B) + '">' + sbaht(p.V - p.B) + '</span></div>');
+    tip.hidden = false;
+    var tw = tip.offsetWidth, left = (x / dgeo.W) * rect.width + 12;
+    if (left + tw > rect.width) left = (x / dgeo.W) * rect.width - tw - 12;
+    tip.style.left = Math.max(0, left) + 'px';
+  }
+  function onDLeave() { var tip = $('dTip'); if (tip) tip.hidden = true; var c = $('dCross'); if (c) c.setAttribute('hidden', ''); }
+
   /* ---------- วาดหน้า ---------- */
   function render() {
     var C = compute();
     renderChrome(C);
-    view.innerHTML = page === 'overview' ? overviewHTML(C) : entryHTML(C);
-    if (page === 'overview') drawCharts(); else updateCalcs();
+    view.innerHTML = page === 'overview' ? overviewHTML(C) : page === 'debt' ? debtPageHTML(C) : entryHTML(C);
+    if (page === 'overview' || page === 'debt') drawCharts();
+    if (page === 'entry') updateCalcs();
+    if (page === 'debt') updateDebtCalcs();
   }
   function route() {
     var h = (location.hash || '#overview').slice(1);
-    page = h === 'entry' ? 'entry' : 'overview';
+    page = h === 'entry' ? 'entry' : h === 'debt' ? 'debt' : 'overview';
     render();
   }
   window.addEventListener('hashchange', route);
@@ -1007,6 +1293,7 @@ try {
       if (gv === null) delete ga.g; else ga.g = gv;
       persist();
     } else if (el.classList.contains('in')) {
+      if (!el.dataset.m || !el.dataset.a) return;
       var raw = el.value, v = parseNum(raw), f = el.dataset.f;
       if (v === 'pending') { el.removeAttribute('aria-invalid'); return; }
       if (v === undefined || (f === 'v' && v !== null && v < 0)) { el.setAttribute('aria-invalid', 'true'); return; }
@@ -1018,18 +1305,20 @@ try {
       if (a) { a[el.dataset.f] = el.value; persist(); }
     }
   });
-  function clampYears(v) { v = Math.round(+v); if (!isFinite(v)) v = 0; return Math.max(0, Math.min(50, v)); }
+  function clampMonths(v) { v = Math.round(+v); if (!isFinite(v)) v = 0; return Math.max(0, Math.min(600, v)); }
+  function spanTxt(mo) { return mo >= 12 ? '≈ ' + Math.floor(mo / 12) + ' ปี' + (mo % 12 ? ' ' + (mo % 12) + ' เดือน' : '') : ''; }
   view.addEventListener('input', function (e) {
     if (e.target.id !== 'projYears') return;
-    var y = clampYears(e.target.value), nb = $('projNum');
-    if (nb) nb.value = y;
-    if (ov && y > 0) { projH = y * 12; ov.pr = project(ov.C, projH, projC); drawLine(); }
+    var mo = clampMonths(e.target.value), nb = $('projNum'), sp = $('projSpan');
+    if (nb) nb.value = mo;
+    if (sp) sp.textContent = spanTxt(mo);
+    if (ov && mo > 0) { projH = mo; ov.pr = project(ov.C, projH, projC); drawLine(); }
   });
   view.addEventListener('change', function (e) {
     if (e.target.id === 'retAsset') { retAsset = e.target.value; render(); var rf = $('retAsset'); if (rf && rf.focus) rf.focus(); return; }
     if (e.target.id === 'projYears' || e.target.id === 'projNum') {
       var id = e.target.id;
-      projH = clampYears(e.target.value) * 12;
+      projH = clampMonths(e.target.value);
       render();
       var f = $(id); if (f && f.focus) f.focus();
       return;
@@ -1096,11 +1385,71 @@ try {
     else if (act === 'clearAll' || act === 'clearSample') {
       if (armed !== act) { arm(act); render(); return; }
       disarm();
-      S = { v: 1, sample: false, assets: [], months: {} };
+      S = { v: 1, sample: false, assets: [], months: {}, debts: [], debtMonths: {} };
       selMonth = null; selAsset = null; backExtra = 0; sub = 'manage';
       persist();
       if (location.hash !== '#entry') location.hash = '#entry'; else render();
       if (act === 'clearSample') render();
+    }
+  });
+
+
+  /* ---------- เหตุการณ์ของหน้าหนี้สิน ---------- */
+  view.addEventListener('input', function (e) {
+    var el = e.target;
+    if (el.classList.contains('din')) {
+      var v = parseNum(el.value), f = el.dataset.f;
+      if (v === 'pending') { el.removeAttribute('aria-invalid'); return; }
+      if (v === undefined || (v !== null && (v < 0 || (f === 'rate' && v > 100)))) { el.setAttribute('aria-invalid', 'true'); return; }
+      el.removeAttribute('aria-invalid');
+      if (el.dataset.m) { setDCell(el.dataset.d, el.dataset.m, f, v); updateDebtCalcs(); }
+      else { var d = findDebt(el.dataset.d); if (!d) return; if (v === null) delete d[f]; else d[f] = v; }
+      persist();
+    } else if (el.classList.contains('dmi')) {
+      var dd = findDebt(el.dataset.d); if (dd) { dd.name = el.value; persist(); }
+    }
+  });
+  view.addEventListener('change', function (e) {
+    var el = e.target;
+    if (el.id === 'dMonthSel') { dSelMonth = el.value; renderDebtBody(); }
+    else if (el.classList.contains('dtype')) { var d = findDebt(el.dataset.d); if (d) { d.type = el.value; persist(); } }
+  });
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-act]'); if (!b) return;
+    var act = b.dataset.act;
+    if (act.charAt(0) !== 'd' || ['disarm'].indexOf(act) >= 0) return;
+    var DC, months, si;
+    if (act === 'dsub') { debtSub = b.dataset.v; if (page !== 'debt') location.hash = '#debt'; else render(); }
+    else if (act === 'drange') { dRange = +b.dataset.v; renderDebtBody(); }
+    else if (act === 'dback') { dBack += 12; renderDebtBody(); }
+    else if (act === 'dprev' || act === 'dnext') {
+      DC = debtCompute(); months = dMonths(DC); si = months.indexOf(dSelMonth || DC.endKey) + (act === 'dprev' ? -1 : 1);
+      if (si >= 0 && si < months.length) { dSelMonth = months[si]; renderDebtBody(); }
+    }
+    else if (act === 'dcopy') {
+      var prevK = idxKey(kIdx(dSelMonth) - 1), changed = false;
+      S.debts.forEach(function (d) {
+        var pe = (S.debtMonths[prevK] || {})[d.id], ce = (S.debtMonths[dSelMonth] || {})[d.id];
+        if (pe && typeof pe.p === 'number' && !(ce && typeof ce.p === 'number')) { setDCell(d.id, dSelMonth, 'p', pe.p); changed = true; }
+      });
+      if (changed) { persist(); renderDebtBody(); } else { var nt = $('dCopyNote'); if (nt) nt.textContent = 'ไม่มียอดชำระเดือนก่อนให้คัดลอก'; }
+    }
+    else if (act === 'dadd') {
+      var name = $('ndName').value.trim(), rate = parseNum($('ndRate').value), pay = parseNum($('ndPay').value), nt2 = $('ndNote');
+      if (!name) { nt2.textContent = 'ใส่ชื่อหนี้ก่อน'; return; }
+      if (rate === undefined || rate === 'pending' || (rate !== null && (rate < 0 || rate > 100))) { nt2.textContent = 'ดอกเบี้ยต่อปีใส่ได้ 0 ถึง 100 (%)'; return; }
+      if (pay === undefined || pay === 'pending' || (pay !== null && pay < 0)) { nt2.textContent = 'ค่างวดต่อเดือนใส่เป็นตัวเลขที่ไม่ติดลบ'; return; }
+      var nd = { id: 'd' + Date.now().toString(36) + Math.floor(Math.random() * 1296).toString(36), name: name, type: $('ndType').value };
+      if (rate !== null) nd.rate = rate; if (pay !== null) nd.pay = pay;
+      S.debts.push(nd); persist(); renderDebtBody();
+    }
+    else if (act === 'ddel') {
+      var key = 'ddel:' + b.dataset.d;
+      if (armed !== key) { arm(key); renderDebtBody(); return; }
+      var did = b.dataset.d;
+      S.debts = S.debts.filter(function (x) { return x.id !== did; });
+      Object.keys(S.debtMonths).forEach(function (mk) { delete S.debtMonths[mk][did]; if (!Object.keys(S.debtMonths[mk]).length) delete S.debtMonths[mk]; });
+      disarm(); persist(); renderDebtBody();
     }
   });
 
@@ -1110,7 +1459,7 @@ try {
   } else window.addEventListener('resize', drawCharts);
 
   setStatus('loading');
-  page = (location.hash || '').slice(1) === 'entry' ? 'entry' : 'overview';
+  (function () { var h0 = (location.hash || '').slice(1); page = h0 === 'entry' ? 'entry' : h0 === 'debt' ? 'debt' : 'overview'; })();
   initAuth();
   init();
 })();
@@ -1119,6 +1468,12 @@ try {
 
 <style>
 /* ---------- พื้นหลังรูปครอบครัว ---------- */
+.mngd { grid-template-columns: minmax(0, 2fr) minmax(130px, 1fr) minmax(100px, .7fr) minmax(130px, .9fr) auto; }
+.mng.mngd.add { border-bottom: 0; }
+.dnum { text-align: right; font-family: var(--f-num); font-variant-numeric: tabular-nums; }
+.din { text-align: right; font-family: var(--f-num); font-variant-numeric: tabular-nums; }
+.dmi { text-align: left; font-family: inherit; }
+@media (max-width: 720px) { .mngd { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .mngd .nm { grid-column: 1 / -1; } }
 .rsum { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px 16px; margin: 0 0 12px; }
 .rstat { display: flex; flex-direction: column; gap: 1px; padding: 8px 10px; background: var(--surface-2); border-radius: 8px; min-width: 0; }
 .rstat .num { font-size: 18px; font-weight: 500; }
