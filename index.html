@@ -373,15 +373,31 @@ try {
         debtMonths[dk][d.id] = { b: bal[d.id], p: pay };
       });
     }
-    return { v: 1, sample: true, assets: assets, months: months, debts: debts, debtMonths: debtMonths, cashflow: {} };
+    return { v: 1, sample: true, assets: assets, months: months, debts: debts, debtMonths: debtMonths, cfCats: [], cfData: {} };
   }
   function normalize(d) {
     var o = JSON.parse(JSON.stringify(d || {}));
     var out = { v: 1, sample: !!o.sample, assets: Array.isArray(o.assets) ? o.assets : [], months: o.months && typeof o.months === 'object' ? o.months : {},
       debts: Array.isArray(o.debts) ? o.debts : (o.debts && typeof o.debts === 'object' ? Object.keys(o.debts).map(function (k) { return o.debts[k]; }) : []),
       debtMonths: o.debtMonths && typeof o.debtMonths === 'object' ? o.debtMonths : {},
-      cashflow: o.cashflow && typeof o.cashflow === 'object' ? o.cashflow : {} };
-    [out.months, out.debtMonths, out.cashflow].forEach(function (mm) { Object.keys(mm).forEach(function (k) { if (!/^\d{4}-\d{2}$/.test(k)) delete mm[k]; }); });
+      cfCats: Array.isArray(o.cfCats) ? o.cfCats.filter(function (c) { return c && c.id; }).map(function (c) { return { id: String(c.id), name: String(c.name || ''), type: c.type === 'income' ? 'income' : 'expense' }; }) : [],
+      cfData: o.cfData && typeof o.cfData === 'object' ? o.cfData : {} };
+    if (o.cashflow && typeof o.cashflow === 'object') {
+      Object.keys(o.cashflow).forEach(function (mk) {
+        var arr = o.cashflow[mk];
+        if (!/^\d{4}-\d{2}$/.test(mk) || !arr) return;
+        if (!Array.isArray(arr)) arr = Object.keys(arr).map(function (i) { return arr[i]; });
+        arr.forEach(function (x) {
+          if (!x || typeof x.amount !== 'number') return;
+          var nm = String(x.category || 'ไม่ระบุ').trim() || 'ไม่ระบุ', ty = x.type === 'income' ? 'income' : 'expense';
+          var c = out.cfCats.filter(function (q) { return q.type === ty && q.name === nm; })[0];
+          if (!c) { c = { id: 'c' + out.cfCats.length + Date.now().toString(36), name: nm, type: ty }; out.cfCats.push(c); }
+          if (!out.cfData[mk]) out.cfData[mk] = {};
+          out.cfData[mk][c.id] = (out.cfData[mk][c.id] || 0) + x.amount;
+        });
+      });
+    }
+    [out.months, out.debtMonths, out.cfData].forEach(function (mm) { Object.keys(mm).forEach(function (k) { if (!/^\d{4}-\d{2}$/.test(k)) delete mm[k]; }); });
     var run = {};
     Object.keys(out.months).sort().forEach(function (k) {
       out.assets.forEach(function (a) {
@@ -398,7 +414,7 @@ try {
   /* ---------- สถานะแอป ---------- */
   var S = makeSample();
   var loaded = false, canWrite = true, mode = 'firebase';
-  var page = 'overview', sub = 'month', selMonth = null, selAsset = null, backExtra = 0, cfMonth = NOW_KEY;
+  var page = 'overview', sub = 'month', selMonth = null, selAsset = null, backExtra = 0, cfMonth = NOW_KEY, cfSub = 'month', cfBack = 0;
   var retAsset = 'all', retN = 12, rangeN = 12, projH = 12, projC = true, filter = 'all', sort = { k: 'V', dir: -1 };
   var armed = null, armTimer = null;
   var ov = null, geo = null;
@@ -1281,63 +1297,117 @@ try {
   }
   function onDLeave() { var tip = $('dTip'); if (tip) tip.hidden = true; var c = $('dCross'); if (c) c.setAttribute('hidden', ''); }
 
-  /* ---------- รายรับรายจ่ายประจำเดือน ---------- */
+  /* ---------- รายรับรายจ่ายประจำเดือน (กรอกแบบหน้ากรอกข้อมูล) ---------- */
   function cfMonths() {
-    var out = [], endI = kIdx(NOW_KEY), keys = Object.keys(S.cashflow || {});
-    keys.forEach(function (k) { if (/^\d{4}-\d{2}$/.test(k)) endI = Math.max(endI, kIdx(k)); });
-    var startI = endI - 23;
-    keys.forEach(function (k) { if (/^\d{4}-\d{2}$/.test(k)) startI = Math.min(startI, kIdx(k)); });
+    var keys = Object.keys(S.cfData || {}).filter(function (k) { return /^\d{4}-\d{2}$/.test(k); });
+    var endI = kIdx(NOW_KEY), startI = endI - 11 - cfBack;
+    keys.forEach(function (k) { endI = Math.max(endI, kIdx(k)); startI = Math.min(startI, kIdx(k)); });
+    var out = [];
     for (var i = startI; i <= endI; i++) out.push(idxKey(i));
     return out;
   }
-  function cfEntries(k) {
-    if (!S.cashflow[k] || !Array.isArray(S.cashflow[k])) S.cashflow[k] = [];
-    return S.cashflow[k];
-  }
+  function cfVal(k, id) { var v = (S.cfData[k] || {})[id]; return typeof v === 'number' ? v : null; }
   function cfTotals(k) {
     var inc = 0, exp = 0;
-    (S.cashflow[k] || []).forEach(function (x) {
-      var a = typeof x.amount === 'number' ? x.amount : 0;
-      if (x.type === 'income') inc += a; else exp += a;
-    });
-    return { income: inc, expense: exp, net: inc - exp };
+    S.cfCats.forEach(function (c) { var v = cfVal(k, c.id); if (v === null) return; if (c.type === 'income') inc += v; else exp += v; });
+    return { income: inc, expense: exp, net: inc - exp, rate: inc > 0 ? (inc - exp) / inc * 100 : 0 };
   }
-  function cfPageHTML() {
-    var months = cfMonths();
-    if (months.indexOf(cfMonth) < 0) cfMonth = months[months.length - 1];
-    var t = cfTotals(cfMonth), rows = cfEntries(cfMonth);
-    var saveRate = t.income > 0 ? (t.net / t.income) * 100 : 0;
-    var si = months.indexOf(cfMonth);
-    var h = '<section class="panel"><div class="panel-head"><div><h2>รายรับรายจ่ายประจำเดือน</h2><p class="intro">บันทึกรายรับและรายจ่ายแยกเป็นรายการ ระบบรวมยอดให้ตามเดือน และเก็บข้อมูลร่วมกับพอร์ตเดิม</p></div></div>' +
-      '<div class="ctrl"><button class="btn" data-act="cfPrev" aria-label="เดือนก่อนหน้า"' + (si <= 0 ? ' disabled' : '') + '>‹</button>' +
-      '<select class="field" id="cfMonth" aria-label="เลือกเดือน">' + months.slice().reverse().map(function(k){ return '<option value="'+k+'"'+(k===cfMonth?' selected':'')+'>'+mLong(k)+'</option>'; }).join('') + '</select>' +
-      '<button class="btn" data-act="cfNext" aria-label="เดือนถัดไป"' + (si >= months.length-1 ? ' disabled' : '') + '>›</button>' +
-      '<button class="btn" data-act="cfAdd">+ เพิ่มรายการ</button></div>' +
-      '<div class="cf-grid">' +
-      '<div class="cf-card"><span class="lab">รายรับ</span><span class="val up num">'+bahtS(t.income)+'</span></div>' +
-      '<div class="cf-card"><span class="lab">รายจ่าย</span><span class="val dn num">'+bahtS(t.expense)+'</span></div>' +
-      '<div class="cf-card"><span class="lab">เงินคงเหลือสุทธิ</span><span class="val '+cls(t.net)+' num">'+sbaht(t.net)+'</span><span class="note">อัตราออม '+nf2.format(saveRate)+'%</span></div>' +
-      '</div></section>';
-
-    h += '<section class="panel"><div class="panel-head"><h2>รายการของเดือน'+mOnly(cfMonth)+'</h2><span class="note">'+rows.length+' รายการ</span></div>';
-    if (!rows.length) {
-      h += '<div class="empty"><p>ยังไม่มีรายการของเดือนนี้</p><button class="btn primary" data-act="cfAdd">เพิ่มรายรับหรือรายจ่าย</button></div>';
-    } else {
-      h += '<div class="tbl-scroll"><table class="cf-table"><thead><tr><th>ประเภท</th><th>หมวดหมู่</th><th class="num">จำนวนเงิน</th><th>รายละเอียด</th><th></th></tr></thead><tbody>';
-      rows.forEach(function(x, i) {
-        h += '<tr><td><span class="cf-type '+(x.type==='income'?'income':'expense')+'">'+(x.type==='income'?'รายรับ':'รายจ่าย')+'</span></td>' +
-          '<td>'+esc(x.category || 'ไม่ระบุ')+'</td><td class="num '+(x.type==='income'?'up':'dn')+'">'+bahtS(x.amount || 0)+'</td>' +
-          '<td>'+esc(x.note || '')+'</td><td><button class="btn sm danger" data-act="cfDel" data-i="'+i+'">ลบ</button></td></tr>';
-      });
-      h += '</tbody></table></div>';
-    }
-    h += '</section><section class="panel"><div class="panel-head"><h2>เพิ่มรายการ</h2><span class="note">กรอกจำนวนเงินเป็นบาท</span></div>' +
-      '<div class="cf-form"><select class="field" id="cfType"><option value="expense">รายจ่าย</option><option value="income">รายรับ</option></select>' +
-      '<input class="field wide" id="cfCategory" placeholder="หมวดหมู่ เช่น เงินเดือน / อาหาร / เดินทาง">' +
-      '<input class="field in" id="cfAmount" type="text" inputmode="decimal" placeholder="จำนวนเงิน">' +
-      '<input class="field wide" id="cfNote" placeholder="รายละเอียดเพิ่มเติม (ถ้ามี)">' +
-      '<button class="btn primary" data-act="cfSave">บันทึก</button></div><p class="blank-note" id="cfNoteMsg"></p></section>';
+  function cfSet(k, id, v) {
+    if (v === null) { if (S.cfData[k]) { delete S.cfData[k][id]; if (!Object.keys(S.cfData[k]).length) delete S.cfData[k]; } return; }
+    if (!S.cfData[k]) S.cfData[k] = {};
+    S.cfData[k][id] = v;
+  }
+  function cfInp(c, m) {
+    var v = cfVal(m, c.id);
+    return '<div class="f"><label class="cl" for="cv_' + esc(c.id) + '">จำนวนเงิน (฿)</label><input class="field cin" id="cv_' + esc(c.id) + '" inputmode="decimal" autocomplete="off" data-c="' + esc(c.id) + '" data-m="' + m + '" value="' + (v === null ? '' : v) + '" placeholder="0" aria-label="' + esc(c.name + ' ' + mLong(m)) + '"' + (ro() ? ' disabled' : '') + '></div>';
+  }
+  function cfCalc(label, kind, c, m) {
+    return '<div class="f calc"><span class="cl">' + label + '</span><span class="num" data-ccalc="' + kind + '" data-c="' + esc(c || '') + '" data-m="' + m + '"></span></div>';
+  }
+  function cfGroup(type, m) {
+    var cats = S.cfCats.filter(function (c) { return c.type === type; }), inc = type === 'income';
+    var h = '<div class="sec-title">' + (inc ? 'รายรับ' : 'รายจ่าย') + '</div><div class="erows"><div class="ehead cfrow"><span>หมวดหมู่</span><span>จำนวนเงิน (฿)</span><span>เดือนก่อน</span><span>เปลี่ยนจากเดือนก่อน</span></div>';
+    if (!cats.length) h += '<div class="erow cfrow"><div class="name note">ยังไม่มีหมวด' + (inc ? 'รายรับ' : 'รายจ่าย') + ' เพิ่มได้ที่แท็บจัดการหมวดหมู่</div></div>';
+    cats.forEach(function (c) {
+      h += '<div class="erow cfrow"><div class="name"><div class="asset"><span class="dot" style="background:var(--' + (inc ? 'up' : 'dn') + ');width:8px;height:28px;border-radius:3px;flex:none"></span><div><div class="t">' + esc(c.name || 'ไม่มีชื่อ') + '</div></div></div></div>' +
+        cfInp(c, m) + cfCalc('เดือนก่อน', 'prev', c.id, m) + cfCalc('เปลี่ยนจากเดือนก่อน', 'chg', c.id, m) + '</div>';
+    });
+    h += '<div class="erow cfrow tot"><div class="name">รวม' + (inc ? 'รายรับ' : 'รายจ่าย') + '</div><div></div>' + cfCalc('เดือนก่อน', inc ? 'pi' : 'pe', '', m) + cfCalc('ยอดรวม', inc ? 'ti' : 'te', '', m) + '</div></div>';
     return h;
+  }
+  function cfMonthBody() {
+    if (!S.cfCats.length) return '<div class="empty"><p>ยังไม่มีหมวดหมู่รายรับรายจ่าย เพิ่มหมวดแรกก่อน แล้วค่อยกรอกยอดรายเดือน</p><button class="btn primary" data-act="cfSeed"' + (ro() ? ' disabled' : '') + '>ใช้หมวดหมู่เริ่มต้น</button> <button class="btn" data-act="cfsub" data-v="manage">เพิ่มหมวดเอง</button></div>';
+    var months = cfMonths();
+    if (!cfMonth || months.indexOf(cfMonth) < 0) cfMonth = months.indexOf(NOW_KEY) >= 0 ? NOW_KEY : months[months.length - 1];
+    var si = months.indexOf(cfMonth), m = cfMonth;
+    var h = '<details class="how"><summary>วิธีกรอก</summary><p>ใส่ยอดรวมของแต่ละหมวดในเดือนนั้น เว้นว่างไว้ถ้าไม่มี ระบบรวมยอดรายรับ รายจ่าย เงินคงเหลือและอัตราออมให้อัตโนมัติ และบันทึกทุกครั้งที่พิมพ์</p></details>' +
+      '<div class="ctrl"><button class="btn" data-act="cfPrev" aria-label="เดือนก่อนหน้า"' + (si <= 0 ? ' disabled' : '') + '>‹</button>' +
+      '<select class="field" id="cfMonth" aria-label="เลือกเดือน">' + months.slice().reverse().map(function (k) { return '<option value="' + k + '"' + (k === m ? ' selected' : '') + '>' + mLong(k) + '</option>'; }).join('') + '</select>' +
+      '<button class="btn" data-act="cfNext" aria-label="เดือนถัดไป"' + (si >= months.length - 1 ? ' disabled' : '') + '>›</button>' +
+      '<button class="btn" data-act="cfBack">เพิ่มเดือนย้อนหลัง</button>' +
+      '<button class="btn" data-act="cfCopy"' + (ro() ? ' disabled' : '') + '>คัดลอกยอดจากเดือนก่อน</button><span class="note" id="cfCopyNote"></span></div>' +
+      '<div class="cf-grid">' +
+      '<div class="cf-card"><span class="lab">รายรับ</span><span class="val num" data-ccalc="ti" data-c="" data-m="' + m + '"></span></div>' +
+      '<div class="cf-card"><span class="lab">รายจ่าย</span><span class="val num" data-ccalc="te" data-c="" data-m="' + m + '"></span></div>' +
+      '<div class="cf-card"><span class="lab">เงินคงเหลือสุทธิ</span><span class="val num" data-ccalc="tn" data-c="" data-m="' + m + '"></span><span class="note" data-ccalc="tr" data-c="" data-m="' + m + '"></span></div></div>';
+    return h + cfGroup('income', m) + cfGroup('expense', m);
+  }
+  function cfSumBody() {
+    var months = cfMonths().filter(function (k) { return S.cfData[k]; }).reverse();
+    if (!months.length) return '<div class="empty"><p>ยังไม่มียอดที่กรอก ไปที่แท็บกรอกรายเดือนเพื่อเริ่มบันทึก</p><button class="btn primary" data-act="cfsub" data-v="month">ไปกรอกรายเดือน</button></div>';
+    var h = '<div class="tbl-scroll"><table class="cf-table"><thead><tr><th>เดือน</th><th class="num">รายรับ</th><th class="num">รายจ่าย</th><th class="num">คงเหลือสุทธิ</th><th class="num">อัตราออม</th></tr></thead><tbody>', si = 0, se = 0;
+    months.forEach(function (k) {
+      var t = cfTotals(k); si += t.income; se += t.expense;
+      h += '<tr><td>' + mLong(k) + '</td><td class="num up">' + bahtS(t.income) + '</td><td class="num dn">' + bahtS(t.expense) + '</td><td class="num ' + cls(t.net) + '">' + sbaht(t.net) + '</td><td class="num">' + nf2.format(t.rate) + '%</td></tr>';
+    });
+    var n = months.length;
+    h += '<tr><td><b>เฉลี่ยต่อเดือน (' + n + ' เดือน)</b></td><td class="num up">' + bahtS(si / n) + '</td><td class="num dn">' + bahtS(se / n) + '</td><td class="num ' + cls(si - se) + '">' + sbaht((si - se) / n) + '</td><td class="num">' + nf2.format(si > 0 ? (si - se) / si * 100 : 0) + '%</td></tr>';
+    return h + '</tbody></table></div>';
+  }
+  function cfManageBody() {
+    var dis = ro() ? ' disabled' : '';
+    var opts = function (sel) { return '<option value="expense"' + (sel === 'expense' ? ' selected' : '') + '>รายจ่าย</option><option value="income"' + (sel === 'income' ? ' selected' : '') + '>รายรับ</option>'; };
+    var h = '<p class="intro">เพิ่ม แก้ไข หรือลบหมวดหมู่รายรับรายจ่าย การลบหมวดจะลบยอดรายเดือนของหมวดนั้นไปด้วย</p>';
+    if (S.cfCats.length) h += '<div class="mng mngc mh"><span>ชื่อหมวดหมู่</span><span>ประเภท</span><span></span></div>';
+    S.cfCats.forEach(function (c) {
+      var key = 'cdel:' + c.id;
+      h += '<div class="mng mngc"><div class="f nm"><label class="cl" for="cn_' + esc(c.id) + '">ชื่อหมวดหมู่</label><input class="field cmi" id="cn_' + esc(c.id) + '" data-c="' + esc(c.id) + '" value="' + esc(c.name) + '" placeholder="ชื่อหมวดหมู่" aria-label="ชื่อหมวดหมู่"' + dis + '></div>' +
+        '<div class="f"><label class="cl" for="ct_' + esc(c.id) + '">ประเภท</label><select class="field ctype" id="ct_' + esc(c.id) + '" data-c="' + esc(c.id) + '" aria-label="ประเภทของ ' + esc(c.name) + '"' + dis + '>' + opts(c.type) + '</select></div>' +
+        '<button class="btn danger sm' + (armed === key ? ' armed' : '') + '" data-act="cfDel" data-c="' + esc(c.id) + '"' + dis + '>' + (armed === key ? 'ยืนยันลบ' : 'ลบ') + '</button></div>';
+    });
+    h += '<div class="sec-title">เพิ่มหมวดหมู่ใหม่</div><div class="mng mngc add"><div class="f nm"><label class="cl" for="ncName">ชื่อหมวดหมู่</label><input class="field" id="ncName" placeholder="เช่น เงินเดือน / อาหาร" aria-label="ชื่อหมวดหมู่ใหม่"' + dis + '></div>' +
+      '<div class="f"><label class="cl" for="ncType">ประเภท</label><select class="field" id="ncType" aria-label="ประเภทหมวดใหม่"' + dis + '>' + opts('expense') + '</select></div>' +
+      '<button class="btn primary" data-act="cfAdd"' + dis + '>เพิ่ม</button></div><p class="blank-note" id="ncNote"></p>';
+    return h;
+  }
+  function cfBody() { return cfSub === 'sum' ? cfSumBody() : cfSub === 'manage' ? cfManageBody() : cfMonthBody(); }
+  function cfPageHTML() {
+    var tabs = [['month', 'กรอกรายเดือน'], ['sum', 'สรุปรายเดือน'], ['manage', 'จัดการหมวดหมู่']];
+    return '<section class="panel"><div class="panel-head" style="margin-bottom:0"><h2>รายรับรายจ่าย</h2><div class="tabs" role="group" aria-label="ส่วนของหน้ารายรับรายจ่าย">' +
+      tabs.map(function (t) { return '<button data-act="cfsub" data-v="' + t[0] + '" aria-pressed="' + (cfSub === t[0]) + '">' + t[1] + '</button>'; }).join('') + '</div></div></section>' +
+      '<div id="cfBody" style="display:flex;flex-direction:column;gap:16px;min-width:0"><section class="panel">' + cfBody() + '</section></div>';
+  }
+  function renderCfBody() {
+    var el = $('cfBody'); if (!el) return;
+    el.innerHTML = '<section class="panel">' + cfBody() + '</section>';
+    updateCfCalcs();
+  }
+  function updateCfCalcs() {
+    var els = document.querySelectorAll('[data-ccalc]');
+    els.forEach(function (el) {
+      var kind = el.dataset.ccalc, m = el.dataset.m, c = el.dataset.c, pk = idxKey(kIdx(m) - 1), txt = '', cl = '';
+      var t = cfTotals(m), p = cfTotals(pk);
+      if (kind === 'prev') { var pv = cfVal(pk, c); txt = pv === null ? '–' : bahtS(pv); }
+      else if (kind === 'chg') { var a = cfVal(m, c), b = cfVal(pk, c); txt = a === null || b === null ? '–' : sbaht(a - b); }
+      else if (kind === 'ti') { txt = bahtS(t.income); cl = 'up'; }
+      else if (kind === 'te') { txt = bahtS(t.expense); cl = 'dn'; }
+      else if (kind === 'pi') txt = S.cfData[pk] ? bahtS(p.income) : '–';
+      else if (kind === 'pe') txt = S.cfData[pk] ? bahtS(p.expense) : '–';
+      else if (kind === 'tn') { txt = sbaht(t.net); cl = cls(t.net); }
+      else if (kind === 'tr') { el.textContent = 'อัตราออม ' + nf2.format(t.rate) + '%'; return; }
+      el.textContent = txt;
+      if (el.classList.contains('num')) el.className = 'num' + (el.parentNode.classList.contains('cf-card') ? ' val' : '') + (cl ? ' ' + cl : '');
+    });
   }
 
   /* ---------- วาดหน้า ---------- */
@@ -1348,6 +1418,7 @@ try {
     if (page === 'overview' || page === 'debt') drawCharts();
     if (page === 'entry') updateCalcs();
     if (page === 'debt') updateDebtCalcs();
+    if (page === 'cashflow') updateCfCalcs();
   }
   function route() {
     var h = (location.hash || '#overview').slice(1);
@@ -1365,18 +1436,6 @@ try {
 
   view.addEventListener('input', function (e) {
     var el = e.target;
-    if (page === 'cashflow' && el.classList.contains('cfedit')) {
-      var idx = +el.dataset.i, field = el.dataset.f, v = field === 'amount' ? parseNum(el.value) : el.value;
-      var arr = cfEntries(cfMonth), row = arr[idx];
-      if (!row) return;
-      if (field === 'amount') {
-        if (v === 'pending') return;
-        if (v === undefined || (v !== null && v < 0)) { el.setAttribute('aria-invalid','true'); return; }
-        el.removeAttribute('aria-invalid'); row.amount = v === null ? 0 : v;
-      } else row[field] = v;
-      persist();
-      return;
-    }
     var el = e.target;
     if (el.classList.contains('mi') && el.dataset.f === 'g') {
       var ga = S.assets.filter(function (x) { return x.id === el.dataset.a; })[0];
@@ -1409,7 +1468,6 @@ try {
     if (ov && mo > 0) { projH = mo; ov.pr = project(ov.C, projH, projC); drawLine(); }
   });
   view.addEventListener('change', function (e) {
-    if (e.target.id === 'cfMonth') { cfMonth = e.target.value; render(); return; }
     if (e.target.id === 'retAsset') { retAsset = e.target.value; render(); var rf = $('retAsset'); if (rf && rf.focus) rf.focus(); return; }
     if (e.target.id === 'projYears' || e.target.id === 'projNum') {
       var id = e.target.id;
@@ -1433,27 +1491,6 @@ try {
     if (act === 'retry') { flush(); return; }
     if (act === 'share') { copyShareLink(); return; }
     if (act === 'disarm') { disarm(); render(); return; }
-    if (act === 'cfPrev' || act === 'cfNext') {
-      var cfm = cfMonths(), cfi = cfm.indexOf(cfMonth);
-      cfi += act === 'cfPrev' ? -1 : 1;
-      if (cfi >= 0 && cfi < cfm.length) { cfMonth = cfm[cfi]; render(); }
-      return;
-    }
-    if (act === 'cfAdd') {
-      var ct = $('cfType'), cc = $('cfCategory'), ca = $('cfAmount'), cn = $('cfNote'), msg = $('cfNoteMsg');
-      if (!ct || !cc || !ca) return;
-      var av = parseNum(ca.value);
-      if (!cc.value.trim()) { if (msg) msg.textContent = 'กรุณาใส่หมวดหมู่'; return; }
-      if (av === undefined || av === 'pending' || av === null || av < 0) { if (msg) msg.textContent = 'กรุณาใส่จำนวนเงินที่ถูกต้อง'; return; }
-      cfEntries(cfMonth).push({ id:'c'+Date.now().toString(36)+Math.floor(Math.random()*1296).toString(36), type:ct.value, category:cc.value.trim(), amount:av, note:(cn.value||'').trim() });
-      persist(); render();
-      return;
-    }
-    if (act === 'cfDel') {
-      var ci = +b.dataset.i, ca2 = cfEntries(cfMonth);
-      if (ci >= 0 && ci < ca2.length) { ca2.splice(ci,1); if (!ca2.length) delete S.cashflow[cfMonth]; persist(); render(); }
-      return;
-    }
     if (act === 'range') { rangeN = +b.dataset.v; render(); }
     else if (act === 'filter') { filter = b.dataset.v; render(); }
     else if (act === 'proj') { projH = +b.dataset.v; render(); }
@@ -1501,7 +1538,7 @@ try {
     else if (act === 'clearAll' || act === 'clearSample') {
       if (armed !== act) { arm(act); render(); return; }
       disarm();
-      S = { v: 1, sample: false, assets: [], months: {}, debts: [], debtMonths: {}, cashflow: {} };
+      S = { v: 1, sample: false, assets: [], months: {}, debts: [], debtMonths: {}, cfCats: [], cfData: {} };
       selMonth = null; selAsset = null; backExtra = 0; sub = 'manage';
       persist();
       if (location.hash !== '#entry') location.hash = '#entry'; else render();
@@ -1569,6 +1606,67 @@ try {
     }
   });
 
+  /* ---------- เหตุการณ์ของหน้ารายรับรายจ่าย ---------- */
+  function cfFind(id) { return S.cfCats.filter(function (c) { return c.id === id; })[0]; }
+  function cfNewId() { return 'c' + Date.now().toString(36) + Math.floor(Math.random() * 1296).toString(36); }
+  view.addEventListener('input', function (e) {
+    var el = e.target;
+    if (el.classList.contains('cin')) {
+      var v = parseNum(el.value);
+      if (v === 'pending') { el.removeAttribute('aria-invalid'); return; }
+      if (v === undefined || (v !== null && v < 0)) { el.setAttribute('aria-invalid', 'true'); return; }
+      el.removeAttribute('aria-invalid');
+      cfSet(el.dataset.m, el.dataset.c, v); persist(); updateCfCalcs();
+    } else if (el.classList.contains('cmi')) {
+      var c = cfFind(el.dataset.c); if (c) { c.name = el.value; persist(); }
+    }
+  });
+  view.addEventListener('change', function (e) {
+    var el = e.target;
+    if (el.id === 'cfMonth') { cfMonth = el.value; renderCfBody(); }
+    else if (el.classList.contains('ctype')) { var c = cfFind(el.dataset.c); if (c) { c.type = el.value === 'income' ? 'income' : 'expense'; persist(); } }
+  });
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-act]');
+    if (!b || b.dataset.act.slice(0, 2) !== 'cf') return;
+    var act = b.dataset.act;
+    if (act === 'cfsub') { cfSub = b.dataset.v; if (page !== 'cashflow') location.hash = '#cashflow'; else render(); }
+    else if (act === 'cfPrev' || act === 'cfNext') {
+      var ms = cfMonths(), i = ms.indexOf(cfMonth) + (act === 'cfPrev' ? -1 : 1);
+      if (i >= 0 && i < ms.length) { cfMonth = ms[i]; renderCfBody(); }
+    }
+    else if (act === 'cfBack') { cfBack += 12; renderCfBody(); }
+    else if (act === 'cfCopy') {
+      var pk = idxKey(kIdx(cfMonth) - 1), changed = false;
+      S.cfCats.forEach(function (c) {
+        var pv = cfVal(pk, c.id);
+        if (pv !== null && cfVal(cfMonth, c.id) === null) { cfSet(cfMonth, c.id, pv); changed = true; }
+      });
+      if (changed) { persist(); renderCfBody(); }
+      else { var n = $('cfCopyNote'); if (n) n.textContent = 'ไม่มียอดเดือนก่อนให้คัดลอก'; }
+    }
+    else if (act === 'cfSeed') {
+      [['เงินเดือน', 'income'], ['รายได้อื่น', 'income'], ['ที่อยู่อาศัย', 'expense'], ['อาหาร', 'expense'], ['เดินทาง', 'expense'], ['สาธารณูปโภค', 'expense'], ['อื่น ๆ', 'expense']].forEach(function (x, i) {
+        S.cfCats.push({ id: cfNewId() + i, name: x[0], type: x[1] });
+      });
+      persist(); renderCfBody();
+    }
+    else if (act === 'cfAdd') {
+      var nm = $('ncName').value.trim();
+      if (!nm) { $('ncNote').textContent = 'ใส่ชื่อหมวดหมู่ก่อน'; return; }
+      S.cfCats.push({ id: cfNewId(), name: nm, type: $('ncType').value === 'income' ? 'income' : 'expense' });
+      persist(); renderCfBody();
+    }
+    else if (act === 'cfDel') {
+      var key = 'cdel:' + b.dataset.c;
+      if (armed !== key) { arm(key); renderCfBody(); return; }
+      var cid = b.dataset.c;
+      S.cfCats = S.cfCats.filter(function (x) { return x.id !== cid; });
+      Object.keys(S.cfData).forEach(function (mk) { delete S.cfData[mk][cid]; if (!Object.keys(S.cfData[mk]).length) delete S.cfData[mk]; });
+      disarm(); persist(); renderCfBody();
+    }
+  });
+
   if (window.ResizeObserver) {
     var lastW = view.clientWidth;
     new ResizeObserver(function () { if (view.clientWidth !== lastW) { lastW = view.clientWidth; drawCharts(); } }).observe(view);
@@ -1586,6 +1684,10 @@ try {
 /* ---------- พื้นหลังรูปครอบครัว ---------- */
 .mngd { grid-template-columns: minmax(0, 2fr) minmax(130px, 1fr) minmax(100px, .7fr) minmax(130px, .9fr) auto; }
 .mng.mngd.add { border-bottom: 0; }
+.mngc { grid-template-columns: minmax(0, 2fr) minmax(130px, 1fr) auto; }
+.mng.mngc.add { border-bottom: 0; }
+.ehead.cfrow, .erow.cfrow { grid-template-columns: minmax(170px, 1.5fr) minmax(120px, 1fr) minmax(110px, 1fr) minmax(130px, 1fr); }
+@media (max-width: 720px) { .mngc { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .mngc .nm { grid-column: 1 / -1; } .erow.cfrow { grid-template-columns: minmax(0,1fr) minmax(0,1fr); } }
 .dnum { text-align: right; font-family: var(--f-num); font-variant-numeric: tabular-nums; }
 .din { text-align: right; font-family: var(--f-num); font-variant-numeric: tabular-nums; }
 .dmi { text-align: left; font-family: inherit; }
